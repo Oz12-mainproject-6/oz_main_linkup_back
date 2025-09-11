@@ -24,7 +24,7 @@ app = FastAPI(
     title="OZ LinkUp Backend",
     description="OZ LinkUp 백엔드 API",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 

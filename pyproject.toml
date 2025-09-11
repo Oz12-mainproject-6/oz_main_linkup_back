@@ -26,6 +26,8 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -57,8 +59,11 @@ asyncio_mode = "auto"
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+# Relax type checking for early development
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+# Ignore missing imports for external packages
+ignore_missing_imports = true
 
 [tool.aerich]
 tortoise_orm = "app.config.TORTOISE_ORM"

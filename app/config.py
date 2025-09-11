@@ -1,5 +1,5 @@
-
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,13 +15,13 @@ TORTOISE_ORM = {
                 "user": os.getenv("DB_USER", "linkup"),
                 "password": os.getenv("DB_PASSWORD", "linkup"),
                 "database": os.getenv("DB_NAME", "linkup"),
-            }
+            },
         }
     },
     "apps": {
         "models": {
-            "models": ["aerich.models"], # 각 모델경로 추가
+            "models": ["aerich.models"],  # 각 모델경로 추가
             "default_connection": "default",
         }
-    }
+    },
 }
