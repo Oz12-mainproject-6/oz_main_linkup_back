@@ -20,7 +20,7 @@ TORTOISE_ORM = {
     },
     "apps": {
         "models": {
-            "models": ["app.models", "aerich.models"],
+            "models": ["aerich.models"], # 각 모델경로 추가
             "default_connection": "default",
         }
     }
