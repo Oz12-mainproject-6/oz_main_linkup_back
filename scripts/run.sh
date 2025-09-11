@@ -12,6 +12,7 @@ echo "Database is ready!"
 
 # 마이그레이션 수행
 echo "Running database migrations..."
+export DB_HOST=db
 uv run aerich upgrade
 
 # FastAPI 앱 실행
