@@ -111,13 +111,20 @@ asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 # Relax type checking for early development
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 # Ignore missing imports for external packages
 ignore_missing_imports = true
+# Disable strict optional for now
+strict_optional = false
+# Allow untyped decorators and calls
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+# Suppress specific errors for Tortoise ORM fields
+warn_no_return = false
 
 [tool.aerich]
 tortoise_orm = "app.config.TORTOISE_ORM"

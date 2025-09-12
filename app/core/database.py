@@ -1,4 +1,5 @@
 from tortoise import Tortoise
+
 from app.config import TORTOISE_ORM
 
 
