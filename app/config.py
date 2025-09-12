@@ -20,7 +20,15 @@ TORTOISE_ORM = {
     },
     "apps": {
         "models": {
-            "models": ["aerich.models"],  # 각 모델경로 추가
+            "models": [
+                "aerich.models",
+                "app.features.artists.models",
+                "app.features.users.models", 
+                "app.features.events.models",
+                "app.features.posts.models",
+                "app.features.images.models",
+                "app.features.notifications.models",
+            ],
             "default_connection": "default",
         }
     },

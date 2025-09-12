@@ -6,3 +6,4 @@
 # Docker Compose 실행
 docker compose up --build
 ```
+![ERD.png](../ERD.png)
