@@ -2,8 +2,47 @@ from tortoise import fields
 from app.core.mixins import TimestampMixin
 
 
+class FanPost(TimestampMixin):
+    """팬 포스트 모델 (구독한 유저만 작성 가능)"""
+    
+    id = fields.BigIntField(pk=True, description="팬 포스트 ID")
+    user = fields.ForeignKeyField("app.features.users.models.User", related_name="fan_posts", description="작성자")
+    artist = fields.ForeignKeyField("app.features.artists.models.Artist", related_name="fan_posts", description="관련 아티스트")
+    
+    content = fields.TextField(description="게시글 내용")
+    
+    class Meta:
+        table = "fan_post"
+
+
+class FanPostComment(TimestampMixin):
+    """팬 포스트 댓글"""
+    
+    id = fields.BigIntField(pk=True, description="댓글 ID")
+    fan_post = fields.ForeignKeyField("app.features.posts.models.FanPost", related_name="comments", description="팬 포스트")
+    user = fields.ForeignKeyField("app.features.users.models.User", related_name="fan_post_comments", description="작성자")
+    
+    content = fields.CharField(max_length=500, description="댓글 내용")
+    
+    class Meta:
+        table = "fan_post_comment"
+
+
+class FanPostLike(TimestampMixin):
+    """팬 포스트 좋아요"""
+    
+    id = fields.BigIntField(pk=True, description="좋아요 ID")
+    fan_post = fields.ForeignKeyField("app.features.posts.models.FanPost", related_name="likes", description="팬 포스트")
+    user = fields.ForeignKeyField("app.features.users.models.User", related_name="fan_post_likes", description="사용자")
+    
+    class Meta:
+        table = "fan_post_like"
+        unique_together = [("fan_post", "user")]  # 중복 좋아요 방지
+
+
+# 기존 Posts, Comments, Likes는 유지 (일반적인 게시글용)
 class Posts(TimestampMixin):
-    """게시글 모델"""
+    """일반 게시글 모델"""
     
     id = fields.BigIntField(pk=True, description="게시글 ID")
     user = fields.ForeignKeyField("app.features.users.models.User", related_name="posts", description="작성자")
@@ -16,7 +55,7 @@ class Posts(TimestampMixin):
 
 
 class Comments(TimestampMixin):
-    """댓글 모델"""
+    """일반 게시글 댓글"""
     
     id = fields.BigIntField(pk=True, description="댓글 ID")
     post = fields.ForeignKeyField("app.features.posts.models.Posts", related_name="comments", description="게시글")
@@ -30,7 +69,7 @@ class Comments(TimestampMixin):
 
 
 class Likes(TimestampMixin):
-    """좋아요 모델"""
+    """일반 게시글 좋아요"""
     
     id = fields.BigIntField(pk=True, description="좋아요 ID")
     user = fields.ForeignKeyField("app.features.users.models.User", related_name="likes", description="사용자")
@@ -39,4 +78,4 @@ class Likes(TimestampMixin):
     
     class Meta:
         table = "likes"
-        unique_together = [("user", "post")]  # 같은 사용자가 같은 게시글에 중복 좋아요 방지
+        unique_together = [("user", "post")]

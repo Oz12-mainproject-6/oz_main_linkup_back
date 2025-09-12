@@ -6,10 +6,11 @@ class Artist(TimestampMixin):
     """아티스트 기본 모델"""
     
     id = fields.BigIntField(pk=True, description="아티스트 ID")
+    company = fields.ForeignKeyField("app.features.users.models.Company", related_name="artists", description="소속사")
+    
     real_name = fields.CharField(max_length=200, description="실명")
     birthdate = fields.DateField(null=True, description="생년월일")
     gender = fields.CharField(max_length=200, null=True, description="성별")  
-    company = fields.CharField(max_length=200, null=True, description="소속사")
     role = fields.CharField(max_length=200, null=True, description="역할")
     mbti = fields.CharField(max_length=4, null=True, description="MBTI")
     height = fields.CharField(max_length=255, null=True, description="키")
@@ -17,6 +18,9 @@ class Artist(TimestampMixin):
     email = fields.CharField(max_length=200, unique=True, description="이메일")
     debut_date = fields.DateField(null=True, description="데뷔일")
     is_group = fields.BooleanField(default=False, description="그룹 여부")
+    
+    # 아티스트 상태
+    is_active = fields.BooleanField(default=True, description="활동 상태")
     
     class Meta:
         table = "artist"
