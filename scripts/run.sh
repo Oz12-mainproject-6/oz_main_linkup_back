@@ -13,6 +13,8 @@ echo "Database is ready!"
 # 마이그레이션 수행
 echo "Running database migrations..."
 export DB_HOST=db
+# 초기 마이그레이션이 없으면 생성
+uv run aerich init-db 2>/dev/null || echo "Database already initialized"
 uv run aerich upgrade
 
 # FastAPI 앱 실행
