@@ -24,23 +24,23 @@ class Artist(TimestampMixin):
     nickname = fields.CharField(max_length=200, null=True, description="별명")
     email = fields.CharField(max_length=200, unique=True, description="이메일")
     debut_date = fields.DateField(null=True, description="데뷔일")
-    
+
     # 타입 및 관계
     artist_type = fields.CharField(
-        max_length=20, 
-        default="solo", 
-        description="아티스트 타입 (group: 그룹, member: 그룹멤버, solo: 솔로)"
+        max_length=20,
+        default="solo",
+        description="아티스트 타입 (group: 그룹, member: 그룹멤버, solo: 솔로)",
     )
     parent_group = fields.ForeignKeyField(
-        "models.Artist", 
-        related_name="members", 
-        null=True, 
-        description="소속 그룹 (멤버인 경우만)"
+        "models.Artist",
+        related_name="members",
+        null=True,
+        description="소속 그룹 (멤버인 경우만)",
     )
-    
+
     # 그룹 전용 필드
     member_count = fields.IntField(null=True, description="멤버 수 (그룹인 경우)")
-    
+
     # 상태
     is_active = fields.BooleanField(default=True, description="활동 상태")
 
