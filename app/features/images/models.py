@@ -16,20 +16,20 @@ class SharedImage(TimestampMixin):
 
     # 업로더 정보
     uploaded_by = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="uploaded_images",
         description="업로드한 사용자 (소속사)",
     )
 
     # 연관 엔티티 (어떤 아티스트/이벤트와 관련된 이미지인지)
     artist = fields.ForeignKeyField(
-        "app.features.artists.models.Artist",
+        "models.Artist",
         related_name="shared_images",
         null=True,
         description="관련 아티스트",
     )
     event = fields.ForeignKeyField(
-        "app.features.events.models.Events",
+        "models.Events",
         related_name="shared_images",
         null=True,
         description="관련 이벤트",
@@ -53,14 +53,14 @@ class ImageUsage(TimestampMixin):
     id = fields.BigIntField(pk=True, description="사용 기록 ID")
 
     shared_image = fields.ForeignKeyField(
-        "app.features.images.models.SharedImage",
+        "models.SharedImage",
         related_name="usage_records",
         description="사용된 이미지",
     )
 
     # 사용한 곳
     fan_post = fields.ForeignKeyField(
-        "app.features.posts.models.FanPost",
+        "models.FanPost",
         related_name="used_images",
         null=True,
         description="팬 포스트",
@@ -68,7 +68,7 @@ class ImageUsage(TimestampMixin):
 
     # 사용자
     used_by = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="image_usages",
         description="사용한 사용자",
     )

@@ -47,7 +47,7 @@ class Company(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="소속사 ID")
     user = fields.OneToOneField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="company_profile",
         description="소속사 계정",
     )

@@ -8,7 +8,7 @@ class Notifications(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="알림 ID")
     user = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="notifications",
         description="사용자",
     )
@@ -30,12 +30,12 @@ class Subscription(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="구독 ID")
     user = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="subscriptions",
         description="구독자",
     )
     artist = fields.ForeignKeyField(
-        "app.features.artists.models.Artist",
+        "models.Artist",
         related_name="subscribers",
         description="아티스트",
     )

@@ -8,10 +8,10 @@ class FanPost(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="팬 포스트 ID")
     user = fields.ForeignKeyField(
-        "app.features.users.models.User", related_name="fan_posts", description="작성자"
+        "models.User", related_name="fan_posts", description="작성자"
     )
     artist = fields.ForeignKeyField(
-        "app.features.artists.models.Artist",
+        "models.Artist",
         related_name="fan_posts",
         description="관련 아티스트",
     )
@@ -27,12 +27,12 @@ class FanPostComment(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="댓글 ID")
     fan_post = fields.ForeignKeyField(
-        "app.features.posts.models.FanPost",
+        "models.FanPost",
         related_name="comments",
         description="팬 포스트",
     )
     user = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="fan_post_comments",
         description="작성자",
     )
@@ -48,12 +48,12 @@ class FanPostLike(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="좋아요 ID")
     fan_post = fields.ForeignKeyField(
-        "app.features.posts.models.FanPost",
+        "models.FanPost",
         related_name="likes",
         description="팬 포스트",
     )
     user = fields.ForeignKeyField(
-        "app.features.users.models.User",
+        "models.User",
         related_name="fan_post_likes",
         description="사용자",
     )
@@ -69,7 +69,7 @@ class Posts(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="게시글 ID")
     user = fields.ForeignKeyField(
-        "app.features.users.models.User", related_name="posts", description="작성자"
+        "models.User", related_name="posts", description="작성자"
     )
     content = fields.TextField(null=True, description="게시글 내용")
     created_by = fields.CharField(max_length=100, description="작성자")
@@ -84,10 +84,10 @@ class Comments(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="댓글 ID")
     post = fields.ForeignKeyField(
-        "app.features.posts.models.Posts", related_name="comments", description="게시글"
+        "models.Posts", related_name="comments", description="게시글"
     )
     user = fields.ForeignKeyField(
-        "app.features.users.models.User", related_name="comments", description="작성자"
+        "models.User", related_name="comments", description="작성자"
     )
     content = fields.CharField(max_length=200, description="댓글 내용")
     created_by = fields.CharField(max_length=100, description="작성자")
@@ -102,10 +102,10 @@ class Likes(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="좋아요 ID")
     user = fields.ForeignKeyField(
-        "app.features.users.models.User", related_name="likes", description="사용자"
+        "models.User", related_name="likes", description="사용자"
     )
     post = fields.ForeignKeyField(
-        "app.features.posts.models.Posts", related_name="likes", description="게시글"
+        "models.Posts", related_name="likes", description="게시글"
     )
     updated_at = fields.DatetimeField(auto_now=True, description="좋아요 시간")
 
