@@ -22,8 +22,8 @@ TORTOISE_ORM = {
         "models": {
             "models": [
                 "aerich.models",
+                "app.features.users.models",
                 "app.features.artists.models",
-                "app.features.users.models", 
                 "app.features.events.models",
                 "app.features.posts.models",
                 "app.features.images.models",

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise
 
 from app.config import TORTOISE_ORM
+from app.features.users.router import auth_router
 
 
 @asynccontextmanager
@@ -26,6 +27,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# 라우터 등록
+app.include_router(auth_router)
 
 
 @app.get("/")
