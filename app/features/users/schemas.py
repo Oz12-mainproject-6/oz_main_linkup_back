@@ -1,12 +1,11 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
 
 
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    phone_number: Optional[str] = None
-    nickname: Optional[str] = None
+    phone_number: str | None = None
+    nickname: str | None = None
     user_type: str = "fan"
 
 
@@ -23,5 +22,5 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
-    nickname: Optional[str]
+    nickname: str | None
     user_type: str
