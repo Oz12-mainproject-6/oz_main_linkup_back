@@ -19,6 +19,13 @@ class TestAuthSignup:
     @pytest.mark.asyncio
     async def test_signup_success(self, client, clean_users_db):
         """Test successful user signup."""
+        # 먼저 이메일 인증 코드 생성
+        from app.features.users.models import EmailVerification
+
+        verification = await EmailVerification.create_verification_code(
+            "test@example.com"
+        )
+
         response = client.post(
             "/api/auth/signup",
             json={
@@ -26,6 +33,7 @@ class TestAuthSignup:
                 "password": "password123",
                 "nickname": "testuser",
                 "user_type": "fan",
+                "verification_code": verification.code,
             },
         )
 
@@ -34,6 +42,7 @@ class TestAuthSignup:
         assert data["email"] == "test@example.com"
         assert data["nickname"] == "testuser"
         assert data["user_type"] == "fan"
+        assert data["is_email_verified"] is True
         assert "id" in data
 
     @pytest.mark.asyncio
@@ -46,12 +55,20 @@ class TestAuthSignup:
             user_type="fan",
         )
 
+        # 이메일 인증 코드 생성
+        from app.features.users.models import EmailVerification
+
+        verification = await EmailVerification.create_verification_code(
+            "test@example.com"
+        )
+
         response = client.post(
             "/api/auth/signup",
             json={
                 "email": "test@example.com",
                 "password": "password123",
                 "nickname": "testuser2",
+                "verification_code": verification.code,
             },
         )
 
@@ -61,18 +78,27 @@ class TestAuthSignup:
     @pytest.mark.asyncio
     async def test_signup_company_user(self, client, clean_users_db):
         """Test company user signup."""
+        # 이메일 인증 코드 생성
+        from app.features.users.models import EmailVerification
+
+        verification = await EmailVerification.create_verification_code(
+            "company@example.com"
+        )
+
         response = client.post(
             "/api/auth/signup",
             json={
                 "email": "company@example.com",
                 "password": "password123",
                 "user_type": "company",
+                "verification_code": verification.code,
             },
         )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["user_type"] == "company"
+        assert data["is_email_verified"] is True
 
 
 class TestAuthLogin:

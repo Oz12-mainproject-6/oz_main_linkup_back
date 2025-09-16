@@ -3,7 +3,7 @@
 import pytest
 from tortoise import Tortoise
 
-from app.features.users.models import Company, User
+from app.features.users.models import Company, EmailVerification, User
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -22,4 +22,5 @@ async def clean_users_db():
     """Clean users tables before each test."""
     await User.all().delete()
     await Company.all().delete()
+    await EmailVerification.all().delete()
     yield

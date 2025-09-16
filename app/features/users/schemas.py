@@ -9,6 +9,7 @@ class SignupRequest(BaseModel):
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
+    verification_code: str  # 이메일 인증 코드 필수
 
 
 class LoginRequest(BaseModel):
@@ -16,9 +17,29 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SocialLoginRequest(BaseModel):
+    provider: str  # "google" or "kakao"
+    access_token: str
+    user_type: UserType = UserType.FAN
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class SendVerificationEmailRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class EmailVerificationResponse(BaseModel):
+    message: str
+    email: str
 
 
 class UserResponse(BaseModel):
@@ -26,3 +47,5 @@ class UserResponse(BaseModel):
     email: str
     nickname: str | None
     user_type: UserType
+    oauth_provider: str | None = None
+    is_email_verified: bool = False
