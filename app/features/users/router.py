@@ -1,5 +1,6 @@
 import os
 from datetime import UTC, datetime
+from urllib.parse import unquote
 
 import httpx
 from fastapi import APIRouter, HTTPException, status
@@ -14,6 +15,7 @@ from app.features.users.models import EmailVerification, User
 from app.features.users.oauth import get_oauth_user_info
 from app.features.users.schemas import (
     EmailVerificationResponse,
+    GoogleTokenRequest,
     LoginRequest,
     SendVerificationEmailRequest,
     SignupRequest,
@@ -275,7 +277,8 @@ async def test_kakao_oauth():
 async def test_kakao_token(request: dict):
     """카카오 토큰 테스트"""
     try:
-        code = request.get("code")
+        # URL 디코딩 처리
+        code = unquote(request.get("code", "").strip())
         if not code:
             return {"error": "code 파라미터가 필요합니다"}
 
@@ -335,20 +338,22 @@ async def test_google_oauth():
         "auth_url": f"https://accounts.google.com/o/oauth2/auth?client_id={os.getenv('GOOGLE_CLIENT_ID')}&redirect_uri=http://localhost:8000/auth/google/callback&scope=openid+email+profile&response_type=code&access_type=offline",
         "instructions": [
             "1. auth_url로 브라우저 접속",
-            "2. 구글 로그인 완료", 
+            "2. 구글 로그인 완료",
             "3. 리다이렉트 URL에서 code 파라미터 복사",
-            "4. /api/auth/test-google-token에 POST 요청"
-        ]
+            "4. /api/auth/test-google-token에 POST 요청",
+        ],
     }
 
+
 @auth_router.post("/test-google-token")
-async def test_google_token(request: dict):
+async def test_google_token(request: GoogleTokenRequest):
     """구글 토큰 테스트"""
     try:
-        code = request.get("code")
+        # URL 디코딩 처리
+        code = unquote(request.code.strip())
         if not code:
             return {"error": "code 파라미터가 필요합니다"}
-            
+
         # 토큰 요청
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
@@ -358,27 +363,27 @@ async def test_google_token(request: dict):
                     "client_id": os.getenv("GOOGLE_CLIENT_ID"),
                     "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
                     "redirect_uri": "http://localhost:8000/auth/google/callback",
-                    "code": code
-                }
+                    "code": code,
+                },
             )
-            
+
             if token_response.status_code != 200:
                 return {"error": "토큰 요청 실패", "detail": token_response.text}
-            
+
             token_data = token_response.json()
             access_token = token_data["access_token"]
-            
+
             # 사용자 정보 요청
             user_response = await client.get(
                 "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"}
+                headers={"Authorization": f"Bearer {access_token}"},
             )
-            
+
             if user_response.status_code != 200:
                 return {"error": "사용자 정보 요청 실패", "detail": user_response.text}
-            
+
             user_data = user_response.json()
-            
+
             return {
                 "success": True,
                 "access_token": access_token,
@@ -388,11 +393,11 @@ async def test_google_token(request: dict):
                     "body": {
                         "provider": "google",
                         "access_token": access_token,
-                        "user_type": "fan"
-                    }
-                }
+                        "user_type": "fan",
+                    },
+                },
             }
-            
+
     except Exception as e:
         return {"error": str(e)}
 
