@@ -75,7 +75,7 @@ class EmailService:
 
                     <div style="text-align: center; color: #999; font-size: 14px;">
                         <p>본 메일은 발신 전용입니다. 문의사항이 있으시면 고객센터로 연락해주세요.</p>
-                        <p>&copy; 2024 LinkUp. All rights reserved.</p>
+                        <p>&copy; 2025 LinkUp. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -95,7 +95,7 @@ class EmailService:
             * 인증 코드는 10분 후 만료됩니다.
 
             본 메일은 발신 전용입니다.
-            © 2024 LinkUp. All rights reserved.
+            © 2025 LinkUp. All rights reserved.
             """
 
             # MIME 객체 생성

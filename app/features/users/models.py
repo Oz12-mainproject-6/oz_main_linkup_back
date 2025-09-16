@@ -105,8 +105,8 @@ class EmailVerification(TimestampMixin):
         # 6자리 랜덤 숫자 생성
         code = f"{secrets.randbelow(1000000):06d}"
 
-        # 10분 후 만료
-        expires_at = datetime.now(UTC) + timedelta(minutes=10)
+        # 5분 후 만료
+        expires_at = datetime.now(UTC) + timedelta(minutes=5)
 
         return await cls.create(email=email, code=code, expires_at=expires_at)
 

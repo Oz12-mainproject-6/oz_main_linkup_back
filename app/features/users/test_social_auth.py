@@ -198,7 +198,7 @@ class TestSocialLogin:
 
     @pytest.mark.asyncio
     async def test_social_login_no_email(self, client, clean_users_db):
-        """Test social login when no email is provided."""
+        """Test social login when no email is provided - should create temp email."""
         mock_user_info = {
             "provider": "google",
             "oauth_id": "google_no_email",
@@ -220,8 +220,18 @@ class TestSocialLogin:
                 },
             )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "이메일 정보를 가져올 수 없습니다" in response.json()["detail"]
+        # 이메일이 없어도 임시 이메일로 성공해야 함
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "access_token" in data
+
+        # 생성된 사용자 확인
+        user = await User.filter(
+            oauth_provider="google", oauth_id="google_no_email"
+        ).first()
+        assert user is not None
+        assert user.email == "google_google_no_email@temp.linkup.com"
+        assert user.is_email_verified is False
 
     @pytest.mark.asyncio
     async def test_social_login_unsupported_provider(self, client, clean_users_db):
