@@ -1,6 +1,15 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class ArtistType(str, Enum):
+    """아티스트 타입"""
+
+    INDIVIDUAL = "individual"
+    GROUP = "group"
 
 
 class Artist(TimestampMixin):
@@ -26,10 +35,9 @@ class Artist(TimestampMixin):
     debut_date = fields.DateField(null=True, description="데뷔일")
 
     # 타입 및 관계
-    artist_type = fields.CharField(
-        max_length=20,
-        default="solo",
-        description="아티스트 타입 (group: 그룹, member: 그룹멤버, solo: 솔로)",
+    artist_type = fields.CharEnumField(
+        ArtistType,
+        description="아티스트 타입",
     )
     parent_group = fields.ForeignKeyField(
         "models.Artist",
