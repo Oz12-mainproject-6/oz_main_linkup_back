@@ -1,6 +1,26 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class NotificationType(str, Enum):
+    """알림 타입"""
+
+    EVENT_REMINDER = "event_reminder"
+    NEW_POST = "new_post"
+    SUBSCRIPTION_CONFIRMED = "subscription_confirmed"
+    ARTIST_UPDATE = "artist_update"
+    SYSTEM_NOTICE = "system_notice"
+
+
+class EntityType(str, Enum):
+    """연관 엔티티 타입"""
+
+    EVENTS = "Events"
+    POST = "Post"
+    ARTIST = "Artist"
 
 
 class Notifications(TimestampMixin):
@@ -12,10 +32,15 @@ class Notifications(TimestampMixin):
         related_name="notifications",
         description="사용자",
     )
-    type = fields.CharField(max_length=50, description="알림 타입")
+    type = fields.CharEnumField(
+        NotificationType,
+        description="알림 타입",
+    )
     message = fields.CharField(max_length=200, null=True, description="알림 메시지")
-    entity_type = fields.CharField(
-        max_length=50, null=True, description="관련 엔티티 타입"
+    entity_type = fields.CharEnumField(
+        EntityType,
+        null=True,
+        description="관련 엔티티 타입",
     )
     entity_id = fields.BigIntField(null=True, description="관련 엔티티 ID")
     read_at = fields.DatetimeField(null=True, description="읽은 시간")

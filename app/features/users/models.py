@@ -1,6 +1,15 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class UserType(str, Enum):
+    """사용자 타입"""
+
+    FAN = "fan"
+    COMPANY = "company"
 
 
 class User(TimestampMixin):
@@ -13,10 +22,10 @@ class User(TimestampMixin):
     nickname = fields.CharField(max_length=50, null=True, description="별명")
 
     # 사용자 타입 구분
-    user_type = fields.CharField(
-        max_length=20,
-        default="fan",
-        description="사용자 타입 (fan: 일반 팬, company: 소속사)",
+    user_type = fields.CharEnumField(
+        UserType,
+        default=UserType.FAN,
+        description="사용자 타입",
     )
 
     # 알림 설정

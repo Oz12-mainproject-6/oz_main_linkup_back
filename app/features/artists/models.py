@@ -12,6 +12,24 @@ class ArtistType(str, Enum):
     GROUP = "group"
 
 
+class ArtistRole(str, Enum):
+    """아티스트 역할"""
+
+    LEADER = "leader"
+    MAIN_VOCAL = "main_vocal"
+    LEAD_VOCAL = "lead_vocal"
+    SUB_VOCAL = "sub_vocal"
+    MAIN_RAPPER = "main_rapper"
+    LEAD_RAPPER = "lead_rapper"
+    SUB_RAPPER = "sub_rapper"
+    MAIN_DANCER = "main_dancer"
+    LEAD_DANCER = "lead_dancer"
+    SUB_DANCER = "sub_dancer"
+    VISUAL = "visual"
+    MAKNAE = "maknae"
+    SOLO = "solo"
+
+
 class Artist(TimestampMixin):
     """아티스트 모델 (그룹/멤버/솔로 통합)"""
 
@@ -27,7 +45,11 @@ class Artist(TimestampMixin):
     stage_name = fields.CharField(max_length=200, null=True, description="예명/그룹명")
     birthdate = fields.DateField(null=True, description="생년월일")
     gender = fields.CharField(max_length=200, null=True, description="성별")
-    role = fields.CharField(max_length=200, null=True, description="역할")
+    role = fields.CharEnumField(
+        ArtistRole,
+        null=True,
+        description="역할",
+    )
     mbti = fields.CharField(max_length=4, null=True, description="MBTI")
     height = fields.CharField(max_length=255, null=True, description="키")
     nickname = fields.CharField(max_length=200, null=True, description="별명")

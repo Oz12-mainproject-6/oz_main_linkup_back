@@ -1,6 +1,32 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class EventCategory(str, Enum):
+    """이벤트 카테고리"""
+
+    CONCERT = "concert"
+    FANMEETING = "fanmeeting"
+    SHOWCASE = "showcase"
+    FESTIVAL = "festival"
+    AWARD_SHOW = "award_show"
+    TV_SHOW = "tv_show"
+    BROADCAST = "broadcast"
+    PHOTOSHOOT = "photoshoot"
+    INTERVIEW = "interview"
+    RELEASE = "release"
+    OTHER = "other"
+
+
+class EventVisibility(str, Enum):
+    """이벤트 공개 설정"""
+
+    PUBLIC = "public"
+    PRIVATE = "private"
+    SUBSCRIBERS_ONLY = "subscribers_only"
 
 
 class Events(TimestampMixin):
@@ -19,10 +45,10 @@ class Events(TimestampMixin):
     end_time = fields.DatetimeField(null=True, description="종료 시간")
     location = fields.CharField(max_length=200, null=True, description="위치")
 
-    # 이벤트 카테고리 (간단하게 시작)
-    category = fields.CharField(
-        max_length=50,
-        description="이벤트 카테고리 (concert, fansign, release, broadcast, goods, etc)",
+    # 이벤트 카테고리
+    category = fields.CharEnumField(
+        EventCategory,
+        description="이벤트 카테고리",
     )
 
     # 알림 관련 (간단한 정책: 등록 즉시 + 1시간 전)
@@ -34,8 +60,10 @@ class Events(TimestampMixin):
     )
 
     # 기타
-    visibility = fields.CharField(
-        max_length=20, default="public", description="공개 여부"
+    visibility = fields.CharEnumField(
+        EventVisibility,
+        default=EventVisibility.PUBLIC,
+        description="공개 설정",
     )
     is_active = fields.BooleanField(default=True, description="활성 상태")
 
