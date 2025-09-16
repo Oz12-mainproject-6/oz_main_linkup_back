@@ -1,6 +1,17 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class ImageType(str, Enum):
+    """이미지 타입"""
+
+    FACE = "face"
+    TORSO = "전체 사진"
+    BANNER = "배너 사진"
+    POST = "post"
 
 
 class SharedImage(TimestampMixin):
@@ -36,8 +47,9 @@ class SharedImage(TimestampMixin):
     )
 
     # 이미지 타입
-    image_type = fields.CharField(
-        max_length=50, description="이미지 타입 (profile, cover, event_poster, etc)"
+    image_type = fields.CharEnumField(
+        ImageType,
+        description="이미지 타입",
     )
 
     # 공개 설정
@@ -59,11 +71,11 @@ class ImageUsage(TimestampMixin):
     )
 
     # 사용한 곳
-    fan_post = fields.ForeignKeyField(
-        "models.FanPost",
+    post = fields.ForeignKeyField(
+        "models.Post",
         related_name="used_images",
         null=True,
-        description="팬 포스트",
+        description="포스트",
     )
 
     # 사용자

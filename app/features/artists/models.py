@@ -1,6 +1,33 @@
+from enum import Enum
+
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+
+class ArtistType(str, Enum):
+    """아티스트 타입"""
+
+    INDIVIDUAL = "individual"
+    GROUP = "group"
+
+
+class ArtistRole(str, Enum):
+    """아티스트 역할"""
+
+    LEADER = "leader"
+    MAIN_VOCAL = "main_vocal"
+    LEAD_VOCAL = "lead_vocal"
+    SUB_VOCAL = "sub_vocal"
+    MAIN_RAPPER = "main_rapper"
+    LEAD_RAPPER = "lead_rapper"
+    SUB_RAPPER = "sub_rapper"
+    MAIN_DANCER = "main_dancer"
+    LEAD_DANCER = "lead_dancer"
+    SUB_DANCER = "sub_dancer"
+    VISUAL = "visual"
+    MAKNAE = "maknae"
+    SOLO = "solo"
 
 
 class Artist(TimestampMixin):
@@ -18,7 +45,11 @@ class Artist(TimestampMixin):
     stage_name = fields.CharField(max_length=200, null=True, description="예명/그룹명")
     birthdate = fields.DateField(null=True, description="생년월일")
     gender = fields.CharField(max_length=200, null=True, description="성별")
-    role = fields.CharField(max_length=200, null=True, description="역할")
+    role = fields.CharEnumField(
+        ArtistRole,
+        null=True,
+        description="역할",
+    )
     mbti = fields.CharField(max_length=4, null=True, description="MBTI")
     height = fields.CharField(max_length=255, null=True, description="키")
     nickname = fields.CharField(max_length=200, null=True, description="별명")
@@ -26,10 +57,9 @@ class Artist(TimestampMixin):
     debut_date = fields.DateField(null=True, description="데뷔일")
 
     # 타입 및 관계
-    artist_type = fields.CharField(
-        max_length=20,
-        default="solo",
-        description="아티스트 타입 (group: 그룹, member: 그룹멤버, solo: 솔로)",
+    artist_type = fields.CharEnumField(
+        ArtistType,
+        description="아티스트 타입",
     )
     parent_group = fields.ForeignKeyField(
         "models.Artist",
