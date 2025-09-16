@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from tortoise import Tortoise
 
 from app.config import TORTOISE_ORM
+from app.features.artists.router import idol_router
+from app.features.companies.router import companies_router
 from app.features.users.router import auth_router
 
 
@@ -25,6 +27,8 @@ app = FastAPI(
 
 # 라우터 등록
 app.include_router(auth_router)
+app.include_router(idol_router)
+app.include_router(companies_router)
 
 
 @app.get("/")
