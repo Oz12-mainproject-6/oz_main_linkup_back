@@ -104,10 +104,12 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "app/features"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+# Allow tests to be discovered in feature directories  
+pythonpath = [".", "app"]
 
 [tool.mypy]
 python_version = "3.12"

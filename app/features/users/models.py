@@ -1,3 +1,5 @@
+import secrets
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 
 from tortoise import fields
@@ -42,6 +44,11 @@ class User(TimestampMixin):
     )
     oauth_id = fields.CharField(max_length=200, null=True, description="소셜 로그인 ID")
 
+    # 이메일 인증
+    is_email_verified = fields.BooleanField(
+        default=False, description="이메일 인증 여부"
+    )
+
     # 기타
     last_login_at = fields.DatetimeField(null=True, description="마지막 로그인 시간")
     deleted_at = fields.DatetimeField(null=True, description="삭제 시간")
@@ -75,3 +82,43 @@ class Company(TimestampMixin):
 
     class Meta:
         table = "company"
+
+
+class EmailVerification(TimestampMixin):
+    """이메일 인증 모델"""
+
+    id = fields.BigIntField(pk=True, description="인증 ID")
+    email = fields.CharField(max_length=200, description="인증할 이메일")
+    code = fields.CharField(max_length=6, description="인증 코드")
+    expires_at = fields.DatetimeField(description="만료 시간")
+    is_used = fields.BooleanField(default=False, description="사용 여부")
+
+    class Meta:
+        table = "email_verification"
+
+    @classmethod
+    async def create_verification_code(cls, email: str) -> "EmailVerification":
+        """이메일 인증 코드 생성"""
+        # 기존 미사용 인증 코드 삭제
+        await cls.filter(email=email, is_used=False).delete()
+
+        # 6자리 랜덤 숫자 생성
+        code = f"{secrets.randbelow(1000000):06d}"
+
+        # 5분 후 만료
+        expires_at = datetime.now(UTC) + timedelta(minutes=5)
+
+        return await cls.create(email=email, code=code, expires_at=expires_at)
+
+    async def is_valid(self) -> bool:
+        """인증 코드 유효성 검사"""
+        if self.is_used:
+            return False
+        if datetime.now(UTC) > self.expires_at:
+            return False
+        return True
+
+    async def mark_as_used(self):
+        """인증 코드를 사용됨으로 표시"""
+        self.is_used = True
+        await self.save()
