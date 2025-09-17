@@ -72,6 +72,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 docker compose up --build
 ```
 
+### 5. 배포 환경 설정
+```bash
+# UV 설치 및 PATH 설정
+curl -LsSf https://astral.sh/uv/install.sh | sh
+#~/.bashrc 에 경로 설정 추가
+export PATH="$HOME/.local/bin:$PATH"
+```
 ## 🐳 Docker 환경 실행
 
 ### 전체 서비스 실행

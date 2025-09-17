@@ -101,7 +101,7 @@ async def login(request: LoginRequest, response: Response):
             value=f"Bearer {access_token}",
             httponly=True,
             max_age=1800,  # 30분
-            samesite="lax"
+            samesite="lax",
         )
 
     # 마지막 로그인 시간 업데이트

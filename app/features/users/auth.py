@@ -1,11 +1,8 @@
 import os
 from datetime import UTC, datetime, timedelta
 
-from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
-from app.features.users.models import User
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
