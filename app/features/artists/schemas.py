@@ -21,20 +21,17 @@ class ArtistResponse(BaseModel):
     artist_type: ArtistType
     member_count: int | None = None
     is_active: bool
+    profile_image: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
 
 class ArtistListResponse(BaseModel):
-    """아티스트 리스트 응답 스키마"""
+    """아티스트 리스트 응답 스키마 (간단 정보만)"""
 
     id: int
-    real_name: str
-    stage_name: str | None = None
-    artist_type: ArtistType
-    debut_date: date | None = None
-    is_active: bool
-    member_count: int | None = None
+    name: str  # 표시용 이름 (stage_name 우선, 없으면 real_name)
+    profile_image: str | None = None  # 프로필 이미지 URL
 
 
 class ArtistSubscriptionInfo(BaseModel):

@@ -30,18 +30,18 @@ async def get_company_dashboard(
     # 소속 아티스트 조회
     artists = await Artist.filter(company=company, is_active=True).all()
 
-    # 최근 30일 이벤트 조회
-    thirty_days_ago = datetime.now() - timedelta(days=30)
+    # 최근 1년 이벤트 조회
+    one_year_ago = datetime.now() - timedelta(days=365)
     recent_events = (
         await Events.filter(
-            artist__company=company, start_time__gte=thirty_days_ago, is_active=True
+            artist__company=company, start_time__gte=one_year_ago, is_active=True
         )
         .prefetch_related("artist")
         .order_by("-start_time")
         .limit(10)
     )
 
-    # 아티스트별 이번 달 이벤트 수 계산
+    # 아티스트별 이번 년 이벤트 수 계산
     artist_events_count = {}
     for event in recent_events:
         artist_id = event.artist_id
