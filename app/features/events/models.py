@@ -34,7 +34,7 @@ class Events(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="이벤트 ID")
     artist = fields.ForeignKeyField(
-        "models.Artist",
+        "models.Artist",  # ✅ 이렇게 해야 함
         related_name="events",
         description="아티스트",
     )
