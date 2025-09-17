@@ -38,3 +38,29 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_current_fan_user(current_user: User = Depends(get_current_user)) -> User:
+    """팬 유저만 접근 가능"""
+    from app.features.users.models import UserType
+
+    if current_user.user_type != UserType.FAN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="팬 유저만 접근 가능합니다.",
+        )
+    return current_user
+
+
+async def get_current_company_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """소속사 유저만 접근 가능 (기본 권한 체크만)"""
+    from app.features.users.models import UserType
+
+    if current_user.user_type != UserType.COMPANY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="소속사 유저만 접근 가능합니다.",
+        )
+    return current_user

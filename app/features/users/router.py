@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from urllib.parse import unquote
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 from app.features.users.auth import (
     create_access_token,
@@ -81,7 +81,7 @@ async def signup(request: SignupRequest):
 
 
 @auth_router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, response: Response):
     # 사용자 조회
     user = await User.filter(email=request.email).first()
     if not user or not verify_password(request.password, user.password):
@@ -93,6 +93,16 @@ async def login(request: LoginRequest):
 
     # JWT 토큰 생성
     access_token = create_access_token(data={"sub": str(user.id)})
+
+    # 쿠키에 토큰 설정 (개발 환경에서만)
+    if os.getenv("ENVIRONMENT") == "development":
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            max_age=1800,  # 30분
+            samesite="lax"
+        )
 
     # 마지막 로그인 시간 업데이트
     user.last_login_at = datetime.now(UTC)

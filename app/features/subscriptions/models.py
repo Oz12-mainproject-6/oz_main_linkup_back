@@ -1,16 +1,6 @@
 from tortoise import fields
+
 from app.core.mixins import TimestampMixin
-from app.features.users.models import User
-
-
-class Artist(TimestampMixin):
-
-    id = fields.BigIntField(pk=True, description="아티스트 ID")
-    name = fields.CharField(max_length=200, unique=True, description="아티스트 이름")
-    description = fields.TextField(null=True, description="아티스트 소개")
-
-    class Meta:
-        table = "artists"
 
 
 class Subscription(TimestampMixin):
