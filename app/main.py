@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise
 
 from app.config import TORTOISE_ORM
+from app.features.events.routers import event_router
 from app.features.users.router import auth_router
 
 
@@ -13,7 +14,7 @@ async def lifespan(app: FastAPI):
     register_tortoise(
         app,
         config=TORTOISE_ORM,
-        generate_schemas=False,
+        generate_schemas=True,
         add_exception_handlers=True,
     )
     yield
@@ -30,6 +31,7 @@ app = FastAPI(
 
 # 라우터 등록
 app.include_router(auth_router)
+app.include_router(event_router)
 
 
 @app.get("/")
