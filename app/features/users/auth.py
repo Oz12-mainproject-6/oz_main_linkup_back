@@ -1,8 +1,12 @@
 import os
 from datetime import UTC, datetime, timedelta
-
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from app.features.users.models import User
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -11,7 +15,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 )  # 7 days default
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """비밀번호 검증"""
@@ -43,3 +46,21 @@ def verify_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    payload = verify_token(token)
+    if payload is None or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않은 인증 토큰입니다.",
+        )
+
+    user_id = payload["sub"]
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+    return user

@@ -5,7 +5,7 @@ from tortoise import Tortoise
 
 from app.config import TORTOISE_ORM
 from app.features.users.router import auth_router
-
+from app.features.subscriptions.router import subscriptions_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,6 +26,8 @@ app = FastAPI(
 # 라우터 등록
 app.include_router(auth_router)
 
+# 구독 라우터 등록
+app.include_router(subscriptions_router)
 
 @app.get("/")
 async def root():
