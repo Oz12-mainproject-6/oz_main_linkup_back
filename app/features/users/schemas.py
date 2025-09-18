@@ -42,10 +42,6 @@ class EmailVerificationResponse(BaseModel):
     email: str
 
 
-class GoogleTokenRequest(BaseModel):
-    code: str
-
-
 class UserResponse(BaseModel):
     id: int
     email: str
