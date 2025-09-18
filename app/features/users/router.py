@@ -25,6 +25,18 @@ from app.features.users.schemas import (
     VerifyEmailRequest,
 )
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from dependencies import get_current_user
+from models import User
+from pydantic import BaseModel
+from database import get_db
+
+router = APIRouter(
+    prefix="/me",
+    tags=["Me"]
+)
+
 auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
@@ -415,3 +427,34 @@ async def test_google_token(request: GoogleTokenRequest):
 @auth_router.post("/logout")
 async def logout():
     return {"message": "로그아웃되었습니다."}
+
+class UserProfile(BaseModel):
+    id: int
+    email: str
+    full_name: str | None
+
+    class Config:
+        orm_mode = True
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+
+@router.get("/", response_model=UserProfile)
+def read_profile(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.patch("/", response_model=UserProfile)
+def update_profile(update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if update.full_name is not None:
+        current_user.full_name = update.full_name
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.delete(current_user)
+    db.commit()
+    return
