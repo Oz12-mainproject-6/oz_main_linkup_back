@@ -3,16 +3,16 @@ from pydantic import BaseModel, Field
 
 # ----------------- User / Artist -----------------
 class UserResponse(BaseModel):
-    id: int
-    username: str
+    user_id: int
+    user_nickname: str
 
     class Config:
         from_attributes = True
 
 
 class ArtistResponse(BaseModel):
-    id: int
-    name: str
+    artist_id: int
+    artist_name: str
 
     class Config:
         from_attributes = True
@@ -20,7 +20,9 @@ class ArtistResponse(BaseModel):
 
 # ----------------- Post -----------------
 class PostBase(BaseModel):
-    content: str = Field(..., min_length=1, max_length=500)  # 게시글 글자 수 제한 설정
+    post_content: str = Field(
+        ..., min_length=1, max_length=500
+    )  # 게시글 글자 수 제한 설정
 
 
 class PostCreate(PostBase):
@@ -32,7 +34,7 @@ class PostUpdate(PostBase):
 
 
 class PostResponse(PostBase):
-    id: int
+    post_id: int
     user: UserResponse
     artist: ArtistResponse
     likes_count: int
@@ -43,7 +45,7 @@ class PostResponse(PostBase):
 
 # ----------------- Comment -----------------
 class CommentBase(BaseModel):
-    content: str
+    comment_content: str
 
 
 class CommentCreate(CommentBase):
@@ -55,7 +57,7 @@ class CommentUpdate(CommentBase):
 
 
 class CommentResponse(CommentBase):
-    id: int
+    comment_id: int
     post_id: int
     user: UserResponse
 

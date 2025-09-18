@@ -4,7 +4,7 @@ from app.features.posts import models, schemas
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
 
-posts_router = APIRouter(prefix="/posts", tags=["Posts"])
+posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
 
 # ----------------- Post CRUD -----------------
@@ -18,7 +18,7 @@ async def create_post(
         content=post_in.content,
     )
     await post.fetch_related("user", "artist")
-    likes_count = await post.likes.all().count()
+    likes_count = await post.likes.count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
@@ -30,18 +30,35 @@ async def create_post(
 
 @posts_router.get("/{post_id}", response_model=schemas.PostResponse)
 async def get_post(post_id: int):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related(
-        "user", "artist", "likes"
+    post = (
+        await models.Post.filter(id=post_id)
+        .prefetch_related("user", "artist", "likes", "comments__user")
+        .first()
     )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    likes_count = await post.likes.all().count()
+    likes_count = await post.likes.count()
+
+    comments_objs = await models.Comment.filter(post_id=post_id).prefetch_related(
+        "user"
+    )
+    comments = [
+        schemas.CommentResponse(
+            id=c.id,
+            post_id=c.post_id,
+            user=schemas.UserResponse.from_orm(c.user),
+            content=c.content,
+        )
+        for c in comments_objs
+    ]
+
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
         artist=schemas.ArtistResponse.from_orm(post.artist),
         content=post.content,
         likes_count=likes_count,
+        comments=comments,
     )
 
 
@@ -51,8 +68,10 @@ async def update_post(
     post_in: schemas.PostUpdate,
     current_user: User = Depends(get_current_user),
 ):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related(
-        "user", "artist", "likes"
+    post = (
+        await models.Post.filter(id=post_id)
+        .prefetch_related("user", "artist", "likes")
+        .first()
     )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -60,7 +79,7 @@ async def update_post(
         raise HTTPException(status_code=403, detail="Not authorized")
     post.content = post_in.content
     await post.save()
-    likes_count = await post.likes.all().count()
+    likes_count = await post.likes.count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
@@ -84,8 +103,10 @@ async def delete_post(post_id: int, current_user: User = Depends(get_current_use
 # ----------------- Like 토글 -----------------
 @posts_router.post("/{post_id}/like", response_model=schemas.PostResponse)
 async def toggle_like(post_id: int, current_user: User = Depends(get_current_user)):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related(
-        "user", "artist", "likes"
+    post = (
+        await models.Post.filter(id=post_id)
+        .prefetch_related("user", "artist", "likes")
+        .first()
     )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -96,7 +117,7 @@ async def toggle_like(post_id: int, current_user: User = Depends(get_current_use
     else:
         await models.Like.create(post_id=post.id, user_id=current_user.id)
 
-    likes_count = await post.likes.all().count()
+    likes_count = await post.likes.count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
