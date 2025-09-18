@@ -6,6 +6,7 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
+    password2: str
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
