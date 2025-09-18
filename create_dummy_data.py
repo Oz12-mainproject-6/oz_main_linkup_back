@@ -57,27 +57,24 @@ async def create_dummy_data():
     # 4. 아티스트 생성
     artists = []
     artist_data = [
-        ("에스파", "aespa", companies[0].id),
-        ("블랙핑크", "BLACKPINK", companies[1].id),
-        ("트와이스", "TWICE", companies[2].id),
-        ("뉴진스", "NewJeans", companies[0].id),
-        ("아이브", "IVE", companies[1].id),
-        ("르세라핌", "LE SSERAFIM", companies[0].id),
-        ("스테이씨", "STAYC", companies[2].id),
-        ("아이들", "(G)I-DLE", companies[1].id),
-        ("에버글로우", "EVERGLOW", companies[0].id),
-        ("우주소녀", "WJSN", companies[2].id)
+        ("에스파", "aespa", 0),
+        ("블랙핑크", "BLACKPINK", 1),
+        ("트와이스", "TWICE", 2),
+        ("뉴진스", "NewJeans", 0),
+        ("아이브", "IVE", 1),
+        ("르세라핌", "LE SSERAFIM", 0),
+        ("스테이씨", "STAYC", 2),
+        ("아이들", "(G)I-DLE", 1),
+        ("에버글로우", "EVERGLOW", 0),
+        ("우주소녀", "WJSN", 2)
     ]
     
-    for i, (name_ko, name_en, company_id) in enumerate(artist_data):
+    for i, (name_ko, name_en, company_idx) in enumerate(artist_data):
         artist = await Artist.create(
-            name=name_ko,
-            name_en=name_en,
-            name_ko=name_ko,
-            debut_date=datetime.now() - timedelta(days=365*(i+1)),
-            description=f"{name_ko}는 대한민국의 인기 아이돌 그룹입니다.",
-            company_id=company_id,
-            artist_role=ArtistRole.IDOL
+            company=companies[company_idx],
+            real_name=name_ko,
+            stage_name=name_ko,
+            role=ArtistRole.LEADER
         )
         artists.append(artist)
     print(f"✅ 아티스트 {len(artists)}개 생성 완료")
