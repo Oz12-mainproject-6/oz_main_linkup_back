@@ -14,10 +14,10 @@ async def create_dummy_data():
         await Tortoise.init(config=TORTOISE_ORM)
         print("🎭 더미 데이터 생성 시작...")
         
-        # 기존 더미 데이터 완전 삭제
+        # 기존 더미 데이터 완전 삭제 (순서 중요)
         print("🧹 기존 데이터 정리...")
         await SharedImage.filter(name__contains="더미").delete()
-        await Subscription.filter(user__email__contains="dummy").delete()
+        await Subscription.all().delete()  # 간단하게 모든 구독 삭제
         await Events.filter(title__contains="더미").delete()
         await Artist.filter(email__contains="dummy").delete()
         await Company.filter(contact_email__contains="dummy").delete()
