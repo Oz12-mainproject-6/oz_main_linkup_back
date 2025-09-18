@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
+
 import httpx
 from loguru import logger
 
@@ -27,14 +28,18 @@ class NotificationService:
         tasks = [
             self._send_push_notification(message),
             self._send_email_notification(message),
-            self._send_webhook_notifications(message, event)
+            self._send_webhook_notifications(message, event),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 로깅
-        success_count = sum(1 for result in results if not isinstance(result, Exception))
-        logger.info(f"Instant notification sent for event {event.id}: {success_count}/{len(tasks)} channels succeeded")
+        success_count = sum(
+            1 for result in results if not isinstance(result, Exception)
+        )
+        logger.info(
+            f"Instant notification sent for event {event.id}: {success_count}/{len(tasks)} channels succeeded"
+        )
 
     async def send_upcoming_notification(self, event: Events):
         """1시간 전 알림 전송"""
@@ -42,20 +47,24 @@ class NotificationService:
 
         tasks = [
             self._send_push_notification(message),
-            self._send_email_notification(message)
+            self._send_email_notification(message),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        success_count = sum(1 for result in results if not isinstance(result, Exception))
-        logger.info(f"Upcoming notification sent for event {event.id}: {success_count}/{len(tasks)} channels succeeded")
+        success_count = sum(
+            1 for result in results if not isinstance(result, Exception)
+        )
+        logger.info(
+            f"Upcoming notification sent for event {event.id}: {success_count}/{len(tasks)} channels succeeded"
+        )
 
-    def _create_instant_message(self, event: Events) -> Dict[str, Any]:
+    def _create_instant_message(self, event: Events) -> dict[str, Any]:
         """즉시 알림 메시지 생성 - 안전성 개선"""
         artist_name = "Unknown Artist"  # 기본값
 
-        if hasattr(event, 'artist') and event.artist:
-            artist_name = getattr(event.artist, 'name', 'Unknown Artist')
+        if hasattr(event, "artist") and event.artist:
+            artist_name = getattr(event.artist, "name", "Unknown Artist")
 
         return {
             "type": "instant",
@@ -67,16 +76,16 @@ class NotificationService:
                 "artist_id": event.artist_id,
                 "start_time": event.start_time.isoformat(),
                 "location": event.location or "미정",
-                "category": event.category.value
-            }
+                "category": event.category.value,
+            },
         }
 
-    def _create_upcoming_message(self, event: Events) -> Dict[str, Any]:
+    def _create_upcoming_message(self, event: Events) -> dict[str, Any]:
         """1시간 전 알림 메시지 생성 - 안전성 개선"""
         artist_name = "Unknown Artist"  # 기본값
 
-        if hasattr(event, 'artist') and event.artist:
-            artist_name = getattr(event.artist, 'name', 'Unknown Artist')
+        if hasattr(event, "artist") and event.artist:
+            artist_name = getattr(event.artist, "name", "Unknown Artist")
 
         return {
             "type": "upcoming",
@@ -88,11 +97,11 @@ class NotificationService:
                 "artist_id": event.artist_id,
                 "start_time": event.start_time.isoformat(),
                 "location": event.location or "미정",
-                "category": event.category.value
-            }
+                "category": event.category.value,
+            },
         }
 
-    async def _send_push_notification(self, message: Dict[str, Any]) -> bool:
+    async def _send_push_notification(self, message: dict[str, Any]) -> bool:
         """푸시 알림 전송"""
         if not self.push_service_url:
             logger.warning("Push service URL not configured")
@@ -101,12 +110,12 @@ class NotificationService:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.push_service_url}/send",
-                    json=message,
-                    timeout=10.0
+                    f"{self.push_service_url}/send", json=message, timeout=10.0
                 )
                 response.raise_for_status()
-                logger.info(f"Push notification sent successfully for event {message['event_id']}")
+                logger.info(
+                    f"Push notification sent successfully for event {message['event_id']}"
+                )
                 return True
 
         except httpx.RequestError as e:
@@ -119,7 +128,7 @@ class NotificationService:
             logger.error(f"Failed to send push notification: {str(e)}")
             return False
 
-    async def _send_email_notification(self, message: Dict[str, Any]) -> bool:
+    async def _send_email_notification(self, message: dict[str, Any]) -> bool:
         """이메일 알림 전송"""
         if not self.email_service_url:
             logger.warning("Email service URL not configured")
@@ -130,17 +139,17 @@ class NotificationService:
                 "subject": message["title"],
                 "body": message["body"],
                 "template": "event_notification",
-                "data": message["data"]
+                "data": message["data"],
             }
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.email_service_url}/send",
-                    json=email_data,
-                    timeout=10.0
+                    f"{self.email_service_url}/send", json=email_data, timeout=10.0
                 )
                 response.raise_for_status()
-                logger.info(f"Email notification sent successfully for event {message['event_id']}")
+                logger.info(
+                    f"Email notification sent successfully for event {message['event_id']}"
+                )
                 return True
 
         except httpx.RequestError as e:
@@ -153,7 +162,9 @@ class NotificationService:
             logger.error(f"Failed to send email notification: {str(e)}")
             return False
 
-    async def _send_webhook_notifications(self, message: Dict[str, Any], event: Events) -> bool:
+    async def _send_webhook_notifications(
+        self, message: dict[str, Any], event: Events
+    ) -> bool:
         """웹훅 알림 전송 - artist 안전성 체크 추가"""
         if not self.webhook_urls:
             logger.info("No webhook URLs configured")
@@ -161,8 +172,8 @@ class NotificationService:
 
         # artist 이름 안전하게 가져오기
         artist_name = "Unknown Artist"
-        if hasattr(event, 'artist') and event.artist:
-            artist_name = getattr(event.artist, 'name', 'Unknown Artist')
+        if hasattr(event, "artist") and event.artist:
+            artist_name = getattr(event.artist, "name", "Unknown Artist")
 
         # 디스코드용 웹훅 페이로드
         webhook_payload = {
@@ -171,16 +182,28 @@ class NotificationService:
                 {
                     "title": event.title,
                     "description": event.description or "설명이 없습니다.",
-                    "color": 0x667eea,
+                    "color": 0x667EEA,
                     "fields": [
                         {"name": "아티스트", "value": artist_name, "inline": True},
-                        {"name": "카테고리", "value": event.category.value, "inline": True},
-                        {"name": "시작 시간", "value": event.start_time.strftime("%Y-%m-%d %H:%M"), "inline": True},
-                        {"name": "위치", "value": event.location or "미정", "inline": True}
+                        {
+                            "name": "카테고리",
+                            "value": event.category.value,
+                            "inline": True,
+                        },
+                        {
+                            "name": "시작 시간",
+                            "value": event.start_time.strftime("%Y-%m-%d %H:%M"),
+                            "inline": True,
+                        },
+                        {
+                            "name": "위치",
+                            "value": event.location or "미정",
+                            "inline": True,
+                        },
                     ],
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            ]
+            ],
         }
 
         successful = 0
@@ -188,20 +211,24 @@ class NotificationService:
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(
-                        webhook_url,
-                        json=webhook_payload,
-                        timeout=10.0
+                        webhook_url, json=webhook_payload, timeout=10.0
                     )
                     response.raise_for_status()
                     successful += 1
 
             except Exception as e:
-                logger.error(f"Failed to send webhook notification to {webhook_url}: {str(e)}")
+                logger.error(
+                    f"Failed to send webhook notification to {webhook_url}: {str(e)}"
+                )
 
-        logger.info(f"Webhook notifications sent: {successful}/{len(self.webhook_urls)} successful")
+        logger.info(
+            f"Webhook notifications sent: {successful}/{len(self.webhook_urls)} successful"
+        )
         return successful > 0
 
-    async def send_batch_notification(self, events: List[Events], notification_type: str = "batch"):
+    async def send_batch_notification(
+        self, events: list[Events], notification_type: str = "batch"
+    ):
         """일괄 알림 전송 (관리자용)"""
         if not events:
             logger.info("No events to send batch notification for")
@@ -211,24 +238,23 @@ class NotificationService:
         event_data = []
         for event in events[:5]:  # 최대 5개만
             artist_name = "Unknown Artist"
-            if hasattr(event, 'artist') and event.artist:
-                artist_name = getattr(event.artist, 'name', 'Unknown Artist')
+            if hasattr(event, "artist") and event.artist:
+                artist_name = getattr(event.artist, "name", "Unknown Artist")
 
-            event_data.append({
-                "id": event.id,
-                "title": event.title,
-                "start_time": event.start_time.isoformat(),
-                "artist_name": artist_name
-            })
+            event_data.append(
+                {
+                    "id": event.id,
+                    "title": event.title,
+                    "start_time": event.start_time.isoformat(),
+                    "artist_name": artist_name,
+                }
+            )
 
         message = {
             "type": notification_type,
             "title": f"📅 {len(events)}개의 이벤트 알림",
             "body": f"새로운 {len(events)}개의 이벤트가 추가되었습니다.",
-            "data": {
-                "event_count": len(events),
-                "events": event_data
-            }
+            "data": {"event_count": len(events), "events": event_data},
         }
 
         await self._send_push_notification(message)
@@ -241,20 +267,22 @@ class NotificationService:
             "event_id": 0,
             "title": "🧪 테스트 알림",
             "body": message,
-            "data": {
-                "timestamp": datetime.now().isoformat()
-            }
+            "data": {"timestamp": datetime.now().isoformat()},
         }
 
         tasks = [
             self._send_push_notification(test_message),
-            self._send_email_notification(test_message)
+            self._send_email_notification(test_message),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        success_count = sum(1 for result in results if not isinstance(result, Exception))
+        success_count = sum(
+            1 for result in results if not isinstance(result, Exception)
+        )
 
-        logger.info(f"Test notification sent: {success_count}/{len(tasks)} channels succeeded")
+        logger.info(
+            f"Test notification sent: {success_count}/{len(tasks)} channels succeeded"
+        )
         return success_count > 0
 
 

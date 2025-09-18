@@ -1,16 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
 
 from app.features.posts import models, schemas
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
 
-router = APIRouter(prefix="/posts", tags=["Posts"])
+posts_router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 # ----------------- Post CRUD -----------------
-@router.post("/", response_model=schemas.PostResponse)
-async def create_post(post_in: schemas.PostCreate, current_user: User = Depends(get_current_user)):
+@posts_router.post("/", response_model=schemas.PostResponse)
+async def create_post(
+    post_in: schemas.PostCreate, current_user: User = Depends(get_current_user)
+):
     post = await models.Post.create(
         user_id=current_user.id,
         artist_id=post_in.artist_id,
@@ -27,9 +28,11 @@ async def create_post(post_in: schemas.PostCreate, current_user: User = Depends(
     )
 
 
-@router.get("/{post_id}", response_model=schemas.PostResponse)
+@posts_router.get("/{post_id}", response_model=schemas.PostResponse)
 async def get_post(post_id: int):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related("user", "artist", "likes")
+    post = await models.Post.get_or_none(id=post_id).prefetch_related(
+        "user", "artist", "likes"
+    )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     likes_count = await post.likes.all().count()
@@ -42,9 +45,15 @@ async def get_post(post_id: int):
     )
 
 
-@router.put("/{post_id}", response_model=schemas.PostResponse)
-async def update_post(post_id: int, post_in: schemas.PostUpdate, current_user: User = Depends(get_current_user)):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related("user", "artist", "likes")
+@posts_router.put("/{post_id}", response_model=schemas.PostResponse)
+async def update_post(
+    post_id: int,
+    post_in: schemas.PostUpdate,
+    current_user: User = Depends(get_current_user),
+):
+    post = await models.Post.get_or_none(id=post_id).prefetch_related(
+        "user", "artist", "likes"
+    )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     if post.user_id != current_user.id:
@@ -61,7 +70,7 @@ async def update_post(post_id: int, post_in: schemas.PostUpdate, current_user: U
     )
 
 
-@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+@posts_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(post_id: int, current_user: User = Depends(get_current_user)):
     post = await models.Post.get_or_none(id=post_id)
     if not post:
@@ -73,9 +82,11 @@ async def delete_post(post_id: int, current_user: User = Depends(get_current_use
 
 
 # ----------------- Like 토글 -----------------
-@router.post("/{post_id}/like", response_model=schemas.PostResponse)
+@posts_router.post("/{post_id}/like", response_model=schemas.PostResponse)
 async def toggle_like(post_id: int, current_user: User = Depends(get_current_user)):
-    post = await models.Post.get_or_none(id=post_id).prefetch_related("user", "artist", "likes")
+    post = await models.Post.get_or_none(id=post_id).prefetch_related(
+        "user", "artist", "likes"
+    )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
@@ -96,8 +107,12 @@ async def toggle_like(post_id: int, current_user: User = Depends(get_current_use
 
 
 # ----------------- Comment CRUD -----------------
-@router.post("/{post_id}/comments", response_model=schemas.CommentResponse)
-async def create_comment(post_id: int, comment_in: schemas.CommentCreate, current_user: User = Depends(get_current_user)):
+@posts_router.post("/{post_id}/comments", response_model=schemas.CommentResponse)
+async def create_comment(
+    post_id: int,
+    comment_in: schemas.CommentCreate,
+    current_user: User = Depends(get_current_user),
+):
     post = await models.Post.get_or_none(id=post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -116,7 +131,7 @@ async def create_comment(post_id: int, comment_in: schemas.CommentCreate, curren
     )
 
 
-@router.get("/{post_id}/comments", response_model=List[schemas.CommentResponse])
+@posts_router.get("/{post_id}/comments", response_model=list[schemas.CommentResponse])
 async def get_comments(post_id: int):
     post = await models.Post.get_or_none(id=post_id)
     if not post:
@@ -133,8 +148,12 @@ async def get_comments(post_id: int):
     ]
 
 
-@router.put("/comments/{comment_id}", response_model=schemas.CommentResponse)
-async def update_comment(comment_id: int, comment_in: schemas.CommentUpdate, current_user: User = Depends(get_current_user)):
+@posts_router.put("/comments/{comment_id}", response_model=schemas.CommentResponse)
+async def update_comment(
+    comment_id: int,
+    comment_in: schemas.CommentUpdate,
+    current_user: User = Depends(get_current_user),
+):
     comment = await models.Comment.get_or_none(id=comment_id).prefetch_related("user")
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
@@ -150,8 +169,10 @@ async def update_comment(comment_id: int, comment_in: schemas.CommentUpdate, cur
     )
 
 
-@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_comment(comment_id: int, current_user: User = Depends(get_current_user)):
+@posts_router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_comment(
+    comment_id: int, current_user: User = Depends(get_current_user)
+):
     comment = await models.Comment.get_or_none(id=comment_id)
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")

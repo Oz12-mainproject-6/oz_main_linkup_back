@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ----------------- User / Artist -----------------
@@ -20,7 +20,7 @@ class ArtistResponse(BaseModel):
 
 # ----------------- Post -----------------
 class PostBase(BaseModel):
-    content: str
+    content: str = Field(..., min_length=1, max_length=500)  # 게시글 글자 수 제한 설정
 
 
 class PostCreate(PostBase):
