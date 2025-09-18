@@ -12,33 +12,33 @@ async def create_dummy_data():
     await Tortoise.init(config=TORTOISE_ORM)
     print("🎭 더미 데이터 생성 시작...")
     
-    # 1. 회사 생성
-    companies = []
+    # 1. 회사 사용자 먼저 생성
+    company_users = []
     company_names = ["SM엔터테인먼트", "YG엔터테인먼트", "JYP엔터테인먼트"]
     
     for i, name in enumerate(company_names):
+        company_user = await User.create(
+            email=f"manager{i+1}@company.com",
+            password="company123!",
+            nickname=f"{name} 매니저",
+            user_type=UserType.COMPANY,
+            is_email_verified=True
+        )
+        company_users.append(company_user)
+    print("✅ 회사 사용자 3개 생성 완료")
+    
+    # 2. 회사 프로필 생성
+    companies = []
+    for i, (name, user) in enumerate(zip(company_names, company_users)):
         company = await Company.create(
+            user=user,
             name=name,
             contact_email=f"contact@{name.lower().replace('엔터테인먼트', '')}.com",
             contact_phone=f"02-123-456{i+1}",
             address=f"서울시 강남구 {name} 빌딩"
         )
         companies.append(company)
-    print("✅ 회사 3개 생성 완료")
-    
-    # 2. 회사 사용자 생성
-    company_users = []
-    for i, company in enumerate(companies):
-        company_user = await User.create(
-            email=f"manager{i+1}@company.com",
-            password="company123!",
-            nickname=f"{company.name} 매니저",
-            user_type=UserType.COMPANY,
-            company_id=company.id,
-            is_email_verified=True
-        )
-        company_users.append(company_user)
-    print("✅ 회사 사용자 3개 생성 완료")
+    print("✅ 회사 프로필 3개 생성 완료")
     
     # 3. 팬 사용자 생성
     fan_users = []
