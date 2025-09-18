@@ -12,6 +12,19 @@ async def create_dummy_data():
     await Tortoise.init(config=TORTOISE_ORM)
     print("🎭 더미 데이터 생성 시작...")
     
+    # 기존 데이터 확인
+    existing_users = await User.filter(email__startswith="manager").count()
+    if existing_users > 0:
+        print(f"⚠️ 기존 더미 데이터 {existing_users}개 발견됨. 삭제 후 진행...")
+        await User.filter(email__contains="@company.com").delete()
+        await User.filter(email__contains="fan").delete()
+        await Company.all().delete()
+        await Artist.all().delete()
+        await Events.all().delete()
+        await Subscription.all().delete()
+        await SharedImage.all().delete()
+        print("✅ 기존 데이터 삭제 완료")
+    
     # 1. 회사 사용자 먼저 생성
     company_users = []
     company_names = ["SM엔터테인먼트", "YG엔터테인먼트", "JYP엔터테인먼트"]
