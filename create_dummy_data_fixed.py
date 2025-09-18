@@ -138,19 +138,15 @@ async def create_dummy_data():
         print("🖼️ 이미지 생성 중...")
         images = []
         for i, artist in enumerate(artists):
-            # 해당 아티스트의 소속사 사용자를 업로더로 설정
-            company_user = None
-            for user in company_users:
-                if user.company_profile == artist.company:
-                    company_user = user
-                    break
+            # 간단하게 첫 번째 회사 사용자를 업로더로 사용
+            uploader = company_users[0]
             
             # Face 이미지
             face_img = await SharedImage.create(
                 name=f"더미_{artist.stage_name}_face.jpg",
                 url=f"https://picsum.photos/400/400?random={i*2}",
                 image_type=ImageType.FACE,
-                uploaded_by=company_user,
+                uploaded_by=uploader,
                 artist=artist,
                 is_public=True
             )
@@ -160,7 +156,7 @@ async def create_dummy_data():
                 name=f"더미_{artist.stage_name}_torso.jpg",
                 url=f"https://picsum.photos/300/500?random={i*2+1}",
                 image_type=ImageType.TORSO,
-                uploaded_by=company_user,
+                uploaded_by=uploader,
                 artist=artist,
                 is_public=True
             )
