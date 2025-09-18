@@ -112,12 +112,10 @@ async def create_dummy_data():
             event = await Events.create(
                 title=f"{artist.stage_name} {event_type}",
                 description=f"{artist.stage_name}의 특별한 {event_type} 이벤트",
-                start_date=datetime.now() + timedelta(days=i*10),
-                end_date=datetime.now() + timedelta(days=i*10+1),
+                start_time=datetime.now() + timedelta(days=i*10),
+                end_time=datetime.now() + timedelta(days=i*10, hours=3),
                 location="서울 올림픽홀",
-                max_participants=500,
                 artist=artist,
-                company=artist.company,
                 category=categories[i % 3]
             )
             events.append(event)
