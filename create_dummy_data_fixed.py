@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from tortoise import Tortoise
 from app.config import TORTOISE_ORM
 from app.features.users.models import User, UserType, Company
+from app.features.users.auth import get_password_hash
 from app.features.artists.models import Artist, ArtistRole, ArtistType
 from app.features.events.models import Events, EventCategory
 from app.features.subscriptions.models import Subscription
@@ -36,7 +37,7 @@ async def create_dummy_data():
         for name, email in company_data:
             user = await User.create(
                 email=email,
-                password="company123!",
+                password=get_password_hash("company123!"),
                 nickname=f"{name} 매니저",
                 user_type=UserType.COMPANY,
                 is_email_verified=True
@@ -66,7 +67,7 @@ async def create_dummy_data():
         for i, name in enumerate(fan_names):
             user = await User.create(
                 email=f"fan_dummy_{i+1}@gmail.com",
-                password="fan123!",
+                password=get_password_hash("fan123!"),
                 nickname=name,
                 user_type=UserType.FAN,
                 is_email_verified=True
