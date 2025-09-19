@@ -10,6 +10,7 @@ from app.features.users.auth import (
     get_password_hash,
     verify_password,
 )
+from app.features.users.dependencies import get_current_user
 from app.features.users.email_service import email_service
 from app.features.users.models import EmailVerification, User, UserType
 from app.features.users.oauth import get_oauth_user_info
@@ -21,6 +22,8 @@ from app.features.users.schemas import (
     SocialLoginRequest,
     TokenResponse,
     UserResponse,
+    UserMeResponse,
+    UserMeUpdateRequest,
     VerifyEmailRequest,
 )
 
@@ -556,3 +559,37 @@ async def google_callback(code: str, user_type: str = "fan"):
 @auth_router.post("/logout")
 async def logout():
     return {"message": "로그아웃되었습니다."}
+
+@me_router.get("/me", response_model=UserMeResponse)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """내 프로필 조회"""
+    return current_user
+
+
+@me_router.put("/me", response_model=UserMeResponse)
+async def update_my_profile(
+    request: UserMeUpdateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """내 프로필 수정"""
+    if request.nickname is not None:
+        current_user.nickname = request.nickname
+    if request.phone_number is not None:
+        current_user.phone_number = request.phone_number
+
+    await current_user.save()
+    return current_user
+
+
+@me_router.delete("/me", status_code=204)
+async def delete_my_account(current_user: User = Depends(get_current_user)):
+    """회원 탈퇴 (soft delete)"""
+    if current_user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 탈퇴한 계정입니다.",
+        )
+
+    current_user.deleted_at = datetime.now(UTC)
+    await current_user.save()
+    return
