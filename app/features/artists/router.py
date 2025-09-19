@@ -71,8 +71,7 @@ async def get_idol_list(
         artist_list.append(
             ArtistListResponse(
                 id=artist.id,
-                name=artist.stage_name
-                or artist.real_name,  # stage_name 우선, 없으면 real_name
+                name=artist.stage_name or artist.group_name or f"Artist {artist.id}",
                 profile_image=profile_image_url,
             )
         )
@@ -93,12 +92,12 @@ async def get_idol_list(
 async def get_idol_detail(artist_name: str):
     """아이돌 상세 조회 (실명 또는 예명으로 검색, 활성 상태만)"""
 
-    # 예명/실명으로 정확 검색 + 부분 검색 (활성 상태만)
+    # 예명/그룹명으로 정확 검색 + 부분 검색 (활성 상태만)
     artist = await Artist.filter(
         models.Q(stage_name__iexact=artist_name)
-        | models.Q(real_name__iexact=artist_name)
+        | models.Q(group_name__iexact=artist_name)
         | models.Q(stage_name__icontains=artist_name)
-        | models.Q(real_name__icontains=artist_name),
+        | models.Q(group_name__icontains=artist_name),
         is_active=True,
     ).first()
 
@@ -126,8 +125,8 @@ async def get_idol_detail(artist_name: str):
 
     return ArtistResponse(
         id=artist.id,
-        real_name=artist.real_name,
         stage_name=artist.stage_name,
+        group_name=artist.group_name,
         birthdate=artist.birthdate,
         gender=artist.gender,
         role=artist.role,
@@ -153,9 +152,9 @@ async def get_idol_subscription_info(
     # 아티스트 조회 (활성 상태만)
     artist = await Artist.filter(
         models.Q(stage_name__iexact=artist_name)
-        | models.Q(real_name__iexact=artist_name)
+        | models.Q(group_name__iexact=artist_name)
         | models.Q(stage_name__icontains=artist_name)
-        | models.Q(real_name__icontains=artist_name),
+        | models.Q(group_name__icontains=artist_name),
         is_active=True,
     ).first()
 
@@ -170,8 +169,8 @@ async def get_idol_subscription_info(
 
     return ArtistSubscriptionInfo(
         id=artist.id,
-        real_name=artist.real_name,
         stage_name=artist.stage_name,
+        group_name=artist.group_name,
         artist_type=artist.artist_type,
         is_subscribed=subscription is not None,
         subscription_date=subscription.created_at.isoformat() if subscription else None,

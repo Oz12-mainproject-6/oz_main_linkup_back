@@ -10,8 +10,8 @@ class DashboardArtistInfo(BaseModel):
     """대시보드용 아티스트 정보"""
 
     id: int
-    real_name: str
     stage_name: str | None = None
+    group_name: str | None = None
     artist_type: ArtistType
     debut_date: date | None = None
     is_active: bool
@@ -87,8 +87,8 @@ class EventResponse(BaseModel):
 class ArtistCreateRequest(BaseModel):
     """아티스트 생성 요청"""
 
-    real_name: str
     stage_name: str | None = None
+    group_name: str | None = None
     birthdate: date | None = None
     gender: str | None = None
     role: ArtistRole | None = None
@@ -105,8 +105,8 @@ class ArtistCreateRequest(BaseModel):
 class ArtistUpdateRequest(BaseModel):
     """아티스트 수정 요청"""
 
-    real_name: str | None = None
     stage_name: str | None = None
+    group_name: str | None = None
     birthdate: date | None = None
     gender: str | None = None
     role: ArtistRole | None = None
