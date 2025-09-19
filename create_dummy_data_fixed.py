@@ -135,7 +135,7 @@ async def create_dummy_data():
         print("💝 구독 관계 생성 중...")
         subscriptions = []
         for fan in fan_users:
-            for i, artist in enumerate(artists[:3]):  # 각 팬이 3명 구독
+            for _i, artist in enumerate(artists[:3]):  # 각 팬이 3명 구독
                 subscription = await Subscription.create(
                     user=fan, artist=artist, is_active=True
                 )

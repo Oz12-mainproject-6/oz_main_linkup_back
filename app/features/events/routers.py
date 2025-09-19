@@ -1,39 +1,42 @@
-from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_404_NOT_FOUND
 
-
 from app.features.events.crud import EventCRUD
+from app.features.events.models import EventCategory, EventVisibility
+from app.features.events.notifications import notification_service
 from app.features.events.schemas import (
-    EventResponse, EventListResponse,
-    FileUploadResponse, BulkEventCreate
+    BulkEventCreate,
+    EventListResponse,
+    EventResponse,
+    FileUploadResponse,
 )
 from app.features.events.services import EventService
-from app.features.events.notifications import notification_service
-from app.features.events.models import EventCategory, EventVisibility
 
 event_router = APIRouter(prefix="/events", tags=["events"])
 
 
 @event_router.get("/", response_model=EventListResponse)
 async def get_events(
-        skip: int = Query(0, ge=0),
-        limit: int = Query(100, ge=1, le=1000),
-        artist_id: Optional[int] = Query(None),
-        category: Optional[EventCategory] = Query(None),
-        visibility: Optional[EventVisibility] = Query(None),
-        is_active: bool = Query(True),
-        start_date: Optional[str] = Query(None, description="YYYY-MM-DD format"),
-        end_date: Optional[str] = Query(None, description="YYYY-MM-DD format")
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    artist_id: int | None = Query(None),
+    category: EventCategory | None = Query(None),
+    visibility: EventVisibility | None = Query(None),
+    is_active: bool = Query(True),
+    start_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    end_date: str | None = Query(None, description="YYYY-MM-DD format"),
 ):
     """이벤트 목록 조회"""
     try:
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except ValueError as err:
+        raise HTTPException(
+            status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
+        ) from err
 
     events, total = await EventCRUD.get_list(
         skip=skip,
@@ -43,14 +46,11 @@ async def get_events(
         visibility=visibility,
         is_active=is_active,
         start_date=start_dt,
-        end_date=end_dt
+        end_date=end_dt,
     )
 
     return EventListResponse(
-        events=events,
-        total=total,
-        page=skip // limit + 1,
-        size=limit
+        events=events, total=total, page=skip // limit + 1, size=limit
     )
 
 
@@ -64,7 +64,9 @@ async def get_event(event_id: int):
 
 
 @event_router.post("/all", response_model=FileUploadResponse)
-async def bulk_create_events(bulk_data: BulkEventCreate, background_tasks: BackgroundTasks):
+async def bulk_create_events(
+    bulk_data: BulkEventCreate, background_tasks: BackgroundTasks
+):
     """일괄 이벤트 생성"""
     events_data = [event.dict() for event in bulk_data.events]
     created_count, errors = await EventCRUD.bulk_create(events_data)
@@ -73,9 +75,7 @@ async def bulk_create_events(bulk_data: BulkEventCreate, background_tasks: Backg
     if created_count > 0:
         recent_events, _ = await EventCRUD.get_list(limit=created_count)
         background_tasks.add_task(
-            notification_service.send_batch_notification,
-            recent_events,
-            "bulk_create"
+            notification_service.send_batch_notification, recent_events, "bulk_create"
         )
 
     return FileUploadResponse(
@@ -83,15 +83,19 @@ async def bulk_create_events(bulk_data: BulkEventCreate, background_tasks: Backg
         total_processed=len(events_data),
         successful=created_count,
         failed=len(events_data) - created_count,
-        errors=errors
+        errors=errors,
     )
 
 
 @event_router.post("/file/upload", response_model=FileUploadResponse)
-async def upload_events_file(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+async def upload_events_file(
+    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
+):
     """파일 업로드"""
-    if not file.filename.endswith(('.xlsx', '.csv')):
-        raise HTTPException(status_code=400, detail="Only Excel (.xlsx) and CSV files are supported")
+    if not file.filename.endswith((".xlsx", ".csv")):
+        raise HTTPException(
+            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
+        )
 
     try:
         result = await EventService.process_upload_file(file)
@@ -101,26 +105,29 @@ async def upload_events_file(file: UploadFile = File(...), background_tasks: Bac
             background_tasks.add_task(
                 notification_service.send_batch_notification,
                 recent_events,
-                "file_upload"
+                "file_upload",
             )
 
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"File processing error: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"File processing error: {str(e)}"
+        ) from e
+
 
 @event_router.post("/file/upload-all", response_model=FileUploadResponse)
-
 async def upload_and_create_bulk_events(
-        file: UploadFile = File(...),
-        background_tasks: BackgroundTasks = None
+    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
 ):
     """
     파일 업로드 후 일괄 이벤트 생성
     - Excel(.xlsx) 또는 CSV(.csv) 지원
     - 성공한 이벤트에 대해 알림 전송
     """
-    if not file.filename.endswith(('.xlsx', '.csv')):
-        raise HTTPException(status_code=400, detail="Only Excel (.xlsx) and CSV files are supported")
+    if not file.filename.endswith((".xlsx", ".csv")):
+        raise HTTPException(
+            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
+        )
 
     try:
         # EventService에서 처리 결과 반환
@@ -132,13 +139,16 @@ async def upload_and_create_bulk_events(
             background_tasks.add_task(
                 notification_service.send_batch_notification,
                 recent_events,
-                "file_upload_bulk"
+                "file_upload_bulk",
             )
 
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"File processing error: {str(e)}")
+
+        raise HTTPException(
+            status_code=400, detail=f"File processing error: {str(e)}"
+        ) from e
 
 
 # ---------------------------
@@ -157,18 +167,19 @@ async def download_single_event(event_id: int):
     return StreamingResponse(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=event_{event_id}.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename=event_{event_id}.xlsx"},
     )
+
 
 # ---------------------------
 # 조건 기반 일괄 이벤트 다운로드
 # ---------------------------
 @event_router.get("/file/download-all")
 async def download_bulk_events(
-        artist_id: Optional[int] = Query(None),
-        category: Optional[EventCategory] = Query(None),
-        start_date: Optional[str] = Query(None, description="YYYY-MM-DD format"),
-        end_date: Optional[str] = Query(None, description="YYYY-MM-DD format")
+    artist_id: int | None = Query(None),
+    category: EventCategory | None = Query(None),
+    start_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    end_date: str | None = Query(None, description="YYYY-MM-DD format"),
 ):
     """
     조건 기반 일괄 이벤트 다운로드
@@ -176,20 +187,19 @@ async def download_bulk_events(
     try:
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except ValueError as err:
+        raise HTTPException(
+            status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
+        ) from err
 
     file_stream = await EventService.export_to_excel(
-        artist_id=artist_id,
-        category=category,
-        start_date=start_dt,
-        end_date=end_dt
+        artist_id=artist_id, category=category, start_date=start_dt, end_date=end_dt
     )
 
     return StreamingResponse(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=events_export.xlsx"}
+        headers={"Content-Disposition": "attachment; filename=events_export.xlsx"},
     )
 
 
@@ -208,6 +218,6 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
         background_tasks.add_task(EventService.trigger_notifications)
         return {"message": "Notification trigger initiated"}
     except Exception as e:
-        from loguru import logger
-        logger.error(f"Failed to trigger notifications: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to trigger notifications")
+        raise HTTPException(
+            status_code=400, detail=f"File processing error: {str(e)}"
+        ) from e

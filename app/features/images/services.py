@@ -59,5 +59,3 @@ class ImageService:
         # DB에서 삭제
         await image.delete()
         return True
-
-

@@ -367,9 +367,9 @@ async def kakao_callback(code: str, user_type: str = "fan"):
                         email=user_info.get("email"),
                         password="",  # 소셜 로그인은 비밀번호 없음
                         nickname=user_info.get("name"),
-                        user_type=UserType.FAN
-                        if user_type == "fan"
-                        else UserType.COMPANY,
+                        user_type=(
+                            UserType.FAN if user_type == "fan" else UserType.COMPANY
+                        ),
                         oauth_provider=user_info["provider"],
                         oauth_id=user_info["oauth_id"],
                         is_email_verified=True,  # 소셜 로그인은 이메일 인증된 것으로 처리
@@ -491,9 +491,9 @@ async def google_callback(code: str, user_type: str = "fan"):
                         email=user_info.get("email"),
                         password="",
                         nickname=user_info.get("name"),
-                        user_type=UserType.FAN
-                        if user_type == "fan"
-                        else UserType.COMPANY,
+                        user_type=(
+                            UserType.FAN if user_type == "fan" else UserType.COMPANY
+                        ),
                         oauth_provider=user_info["provider"],
                         oauth_id=user_info["oauth_id"],
                         is_email_verified=True,
