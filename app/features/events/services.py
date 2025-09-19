@@ -1,10 +1,9 @@
 import io
-
 from datetime import datetime
 from typing import BinaryIO
+
 import pandas as pd
 from fastapi import HTTPException, UploadFile
-
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -43,7 +42,6 @@ class EventService:
 
             for index, row in df.iterrows():
                 try:
-
                     start_time = pd.to_datetime(row["start_time"])
                     end_time = (
                         pd.to_datetime(row["end_time"])
@@ -97,7 +95,6 @@ class EventService:
                 status_code=400, detail=f"File processing error: {str(e)}"
             ) from e
 
-
     @staticmethod
     async def generate_template() -> BinaryIO:
         """업로드 템플릿 생성"""
@@ -128,8 +125,8 @@ class EventService:
             cell.alignment = header_alignment
 
         # 설명 시트 추가
-        _ws_info = wb.create_sheet("Information")
-        _info_data = [
+        ws_info = wb.create_sheet("Information")
+        info_data = [
             ["Column", "Description", "Required", "Example"],
             ["artist_id", "아티스트 ID (정수)", "Yes", "1"],
             ["title", "이벤트 제목 (최대 200자)", "Yes", "2024 콘서트"],
@@ -147,7 +144,6 @@ class EventService:
                 "2024-12-25 22:00:00",
             ],
             ["location", "위치 (최대 200자)", "No", "올림픽공원"],
-
             ["category", "카테고리", "Yes", "concert, fanmeeting, showcase, etc."],
             ["visibility", "공개 설정", "No", "public, private, subscribers_only"],
         ]
@@ -334,8 +330,5 @@ class EventService:
         # 전체 이벤트 수
         total_events, _ = await EventCRUD.get_list(limit=1)
 
-        # 카테고리별 통계
-        _ = {}  # category_stats not implemented yet
-
-            ["category", "카테고리"](),
-        ]
+        # 카테고리별 통계 (추후 구현 예정)
+        return {"total_events": len(total_events)}

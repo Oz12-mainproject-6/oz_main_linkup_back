@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from urllib.parse import unquote
 
 import httpx
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.features.users.auth import (
     create_access_token,
@@ -21,9 +21,9 @@ from app.features.users.schemas import (
     SignupRequest,
     SocialLoginRequest,
     TokenResponse,
-    UserResponse,
     UserMeResponse,
     UserMeUpdateRequest,
+    UserResponse,
     VerifyEmailRequest,
 )
 
@@ -275,7 +275,8 @@ async def verify_email(request: VerifyEmailRequest):
 async def kakao_login(user_type: str = "fan"):
     """카카오 로그인 시작 - 카카오 로그인 페이지로 리다이렉트"""
     kakao_client_id = os.getenv("KAKAO_CLIENT_ID")
-    redirect_uri = "http://localhost:8000/api/auth/kakao/callback"
+    # 배포 환경에 맞는 redirect_uri 설정
+    redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback"
 
     auth_url = f"https://kauth.kakao.com/oauth/authorize?client_id={kakao_client_id}&redirect_uri={redirect_uri}&response_type=code&scope=profile_nickname,account_email&state={user_type}"
 
@@ -288,7 +289,8 @@ async def kakao_login(user_type: str = "fan"):
 async def google_login(user_type: str = "fan"):
     """구글 로그인 시작 - 구글 로그인 페이지로 리다이렉트"""
     google_client_id = os.getenv("GOOGLE_CLIENT_ID")
-    redirect_uri = "http://localhost:8000/api/auth/google/callback"
+    # 배포 환경에 맞는 redirect_uri 설정
+    redirect_uri = "http://linkup.p-e.kr:8000/api/auth/google/callback"
 
     auth_url = f"https://accounts.google.com/o/oauth2/auth?client_id={google_client_id}&redirect_uri={redirect_uri}&scope=openid email profile&response_type=code&access_type=offline&state={user_type}"
 
@@ -317,7 +319,7 @@ async def kakao_callback(code: str, user_type: str = "fan"):
                     "grant_type": "authorization_code",
                     "client_id": os.getenv("KAKAO_CLIENT_ID"),
                     "client_secret": os.getenv("KAKAO_CLIENT_SECRET"),
-                    "redirect_uri": "http://localhost:8000/api/auth/kakao/callback",
+                    "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/kakao/callback",
                     "code": code,
                 },
             )
@@ -416,8 +418,12 @@ async def kakao_callback(code: str, user_type: str = "fan"):
         )
 
         # 성공 페이지로 리다이렉트 (프론트엔드 URL)
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        redirect_url = f"{frontend_url}/auth/success?token={access_token}&user_id={user.id}&email={user.email}&nickname={user.nickname}"
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # 간단하게 JWT 토큰만 전달
+        redirect_url = (
+            f"{frontend_url}/auth/success?access_token={access_token}&token_type=Bearer"
+        )
 
         from fastapi.responses import RedirectResponse
 
@@ -456,7 +462,7 @@ async def google_callback(code: str, user_type: str = "fan"):
                     "grant_type": "authorization_code",
                     "client_id": os.getenv("GOOGLE_CLIENT_ID"),
                     "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-                    "redirect_uri": "http://localhost:8000/api/auth/google/callback",
+                    "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/google/callback",
                     "code": code,
                 },
             )
@@ -537,8 +543,12 @@ async def google_callback(code: str, user_type: str = "fan"):
             }
         )
 
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        redirect_url = f"{frontend_url}/auth/success?token={access_token}&user_id={user.id}&email={user.email}&nickname={user.nickname}"
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # 간단하게 JWT 토큰만 전달
+        redirect_url = (
+            f"{frontend_url}/auth/success?access_token={access_token}&token_type=Bearer"
+        )
 
         from fastapi.responses import RedirectResponse
 
@@ -561,13 +571,14 @@ async def google_callback(code: str, user_type: str = "fan"):
 async def logout():
     return {"message": "로그아웃되었습니다."}
 
-@me_router.get("/me", response_model=UserMeResponse)
+
+@auth_router.get("/me", response_model=UserMeResponse)
 async def get_my_profile(current_user: User = Depends(get_current_user)):
     """내 프로필 조회"""
     return current_user
 
 
-@me_router.put("/me", response_model=UserMeResponse)
+@auth_router.put("/me", response_model=UserMeResponse)
 async def update_my_profile(
     request: UserMeUpdateRequest,
     current_user: User = Depends(get_current_user),
@@ -582,7 +593,7 @@ async def update_my_profile(
     return current_user
 
 
-@me_router.delete("/me", status_code=204)
+@auth_router.delete("/me", status_code=204)
 async def delete_my_account(current_user: User = Depends(get_current_user)):
     """회원 탈퇴 (soft delete)"""
     if current_user.deleted_at:

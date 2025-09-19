@@ -9,18 +9,17 @@ from app.features.events.models import EventCategory, Events, EventVisibility
 class EventCRUD:
     """이벤트 CRUD 클래스 (조회, 일괄 생성, 알림 관련만 남김)"""
 
-  
     @staticmethod
     async def get_list(
-            skip: int = 0,
-            limit: int = 100,
-            artist_parent_group: int | None = None,  # 🔹 Artist의 parent_group ID로 필터링
-            artist_id: int | None = None,
-            category: EventCategory | None = None,
-            visibility: EventVisibility | None = None,
-            is_active: bool = True,
-            start_date: datetime | None = None,
-            end_date: datetime | None = None,
+        skip: int = 0,
+        limit: int = 100,
+        artist_parent_group: int | None = None,  # 🔹 Artist의 parent_group ID로 필터링
+        artist_id: int | None = None,
+        category: EventCategory | None = None,
+        visibility: EventVisibility | None = None,
+        is_active: bool = True,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> tuple[list[Events], int]:
         """이벤트 목록 조회"""
         query = Events.filter(is_active=is_active)
@@ -49,7 +48,6 @@ class EventCRUD:
 
         return events, total
 
-
     @staticmethod
     async def get_by_id(event_id: int) -> Events | None:
         """이벤트 상세 조회"""
@@ -60,7 +58,6 @@ class EventCRUD:
 
     @staticmethod
     async def bulk_create(events_data: list[dict]) -> tuple[int, list[str]]:
-       
         """일괄 이벤트 생성 - 트랜잭션 처리"""
         from tortoise.transactions import in_transaction
 
@@ -116,7 +113,7 @@ class EventCRUD:
 
     @staticmethod
     async def get_events_by_date_range(
-            start_date: datetime, end_date: datetime
+        start_date: datetime, end_date: datetime
     ) -> list[Events]:
         """날짜 범위로 이벤트 조회"""
         return (

@@ -58,10 +58,7 @@ class FileUploadResponse(BaseModel):
 class BulkEventCreate(BaseModel):
     """일괄 이벤트 생성 스키마"""
 
-
     events: list[EventCreateRequest]
-
 
     class Config:
         arbitrary_types_allowed = True
-
