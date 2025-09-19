@@ -14,7 +14,7 @@ class EventCRUD:
     async def get_list(
             skip: int = 0,
             limit: int = 100,
-            artist_parent_group: int | None = None,  # 🔹 소속그룹 ID
+            artist_parent_group: int | None = None,  # 🔹 Artist의 parent_group ID로 필터링
             artist_id: int | None = None,
             category: EventCategory | None = None,
             visibility: EventVisibility | None = None,
@@ -23,11 +23,11 @@ class EventCRUD:
             end_date: datetime | None = None,
     ) -> tuple[list[Events], int]:
         """이벤트 목록 조회"""
-        query = Events.filter(is_active=True)
+        query = Events.filter(is_active=is_active)
 
-        # 🔹 parent_group 필터 (자기참조 FK 구조 대응)
+        # 🔹 artist_parent_group 필터 (Artist의 parent_group을 통해 필터링)
         if artist_parent_group is not None:
-            query = query.filter(artist_parent_group=artist_parent_group)
+            query = query.filter(artist__parent_group=artist_parent_group)
         if artist_id:
             query = query.filter(artist_id=artist_id)
         if category:
@@ -41,7 +41,7 @@ class EventCRUD:
 
         total = await query.count()
         events = (
-            await query.select_related("artist", "parent_group")  # 🔹 parent_group join도 미리 해둠
+            await query.select_related("artist")  # 🔹 Artist만 join
             .offset(skip)
             .limit(limit)
             .order_by("-start_time")
@@ -49,7 +49,16 @@ class EventCRUD:
 
         return events, total
 
-   
+
+    @staticmethod
+    async def get_by_id(event_id: int) -> Events | None:
+        """이벤트 상세 조회"""
+        try:
+            return await Events.get(id=event_id).select_related("artist")
+        except DoesNotExist:
+            return None
+
+    @staticmethod
     async def bulk_create(events_data: list[dict]) -> tuple[int, list[str]]:
        
         """일괄 이벤트 생성 - 트랜잭션 처리"""
@@ -66,6 +75,7 @@ class EventCRUD:
                         await Artist.get(
                             id=event_data["artist_id"], using_db=connection
                         )
+
                         await Events.create(**event_data, using_db=connection)
                         created_count += 1
                     except DoesNotExist:
@@ -106,7 +116,7 @@ class EventCRUD:
 
     @staticmethod
     async def get_events_by_date_range(
-        start_date: datetime, end_date: datetime
+            start_date: datetime, end_date: datetime
     ) -> list[Events]:
         """날짜 범위로 이벤트 조회"""
         return (
