@@ -7,22 +7,9 @@ from app.features.events.models import EventCategory, Events, EventVisibility
 
 
 class EventCRUD:
-    """이벤트 CRUD 클래스"""
+    """이벤트 CRUD 클래스 (조회, 일괄 생성, 알림 관련만 남김)"""
 
-    @staticmethod
-    async def create(event_data: dict) -> Events:
-        """이벤트 생성"""
-        try:
-            # Artist 존재 확인
-            await Artist.get(id=event_data["artist_id"])
-            event = await Events.create(**event_data)
-            # 생성 후 관계 데이터 포함해서 반환
-            return await Events.get(id=event.id).select_related("artist")
-        except DoesNotExist:
-            raise ValueError("Artist not found") from None
-        except Exception as e:
-            raise ValueError(f"Failed to create event: {str(e)}") from e
-
+  
     @staticmethod
     async def get_by_id(event_id: int) -> Events | None:
         """ID로 이벤트 조회"""
@@ -66,33 +53,10 @@ class EventCRUD:
 
         return events, total
 
-    @staticmethod
-    async def update(event_id: int, update_data: dict) -> Events | None:
-        """이벤트 업데이트"""
-        try:
-            event = await Events.get(id=event_id)
-            await event.update_from_dict(update_data)
-            await event.save()
-            return await Events.get(id=event_id).select_related("artist")
-        except DoesNotExist:
-            return None
-        except Exception as e:
-            raise ValueError(f"Failed to update event: {str(e)}") from e
-
-    @staticmethod
-    async def delete(event_id: int) -> bool:
-        """이벤트 삭제 (소프트 삭제)"""
-        try:
-            event = await Events.get(id=event_id)
-            event.is_active = False
-            await event.save()
-            return True
-        except DoesNotExist:
-            return False
-
-    @staticmethod
+   
     async def bulk_create(events_data: list[dict]) -> tuple[int, list[str]]:
-        """일괄 이벤트 생성 - 트랜잭션 처리 추가"""
+       
+        """일괄 이벤트 생성 - 트랜잭션 처리"""
         from tortoise.transactions import in_transaction
 
         created_count = 0
@@ -124,7 +88,6 @@ class EventCRUD:
         target_time = now + timedelta(hours=hours_ahead)
 
         if hours_ahead == 1:
-            # 1시간 후 이벤트 중 아직 알림이 안 간 것들
             return await Events.filter(
                 start_time__lte=target_time,
                 start_time__gt=now,
@@ -136,7 +99,6 @@ class EventCRUD:
                 ],
             ).select_related("artist")
         else:
-            # 즉시 알림용 (새로 생성된 이벤트)
             return await Events.filter(
                 instant_notification_sent=False,
                 is_active=True,

@@ -1,9 +1,10 @@
 import io
+
 from datetime import datetime
 from typing import BinaryIO
-
 import pandas as pd
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
+
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -42,7 +43,7 @@ class EventService:
 
             for index, row in df.iterrows():
                 try:
-                    # 날짜 형식 파싱
+
                     start_time = pd.to_datetime(row["start_time"])
                     end_time = (
                         pd.to_datetime(row["end_time"])
@@ -66,15 +67,12 @@ class EventService:
                     # 데이터 검증
                     if len(event_data["title"]) > 200:
                         raise ValueError("Title too long (max 200 characters)")
-
                     if event_data["location"] and len(event_data["location"]) > 200:
                         raise ValueError("Location too long (max 200 characters)")
-
                     if end_time and start_time >= end_time:
                         raise ValueError("End time must be after start time")
 
                     events_data.append(event_data)
-
                 except Exception as e:
                     errors.append(f"Row {index + 2}: {str(e)}")
 
@@ -91,12 +89,15 @@ class EventService:
                 total_processed=len(df),
                 successful=created_count,
                 failed=len(df) - created_count,
-                errors=all_errors[:10],  # 최대 10개 에러만 반환
+                errors=all_errors[:10],
             )
 
         except Exception as e:
-            logger.error(f"File processing failed: {str(e)}")
-            raise ValueError(f"File processing failed: {str(e)}") from e
+
+            raise HTTPException(
+                status_code=400, detail=f"File processing error: {str(e)}"
+            ) from e
+
 
     @staticmethod
     async def generate_template() -> BinaryIO:
@@ -105,14 +106,12 @@ class EventService:
         ws = wb.active
         ws.title = "Events Template"
 
-        # 헤더 스타일
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(
             start_color="366092", end_color="366092", fill_type="solid"
         )
         header_alignment = Alignment(horizontal="center", vertical="center")
 
-        # 헤더 설정
         headers = [
             "artist_id",
             "title",
@@ -123,7 +122,6 @@ class EventService:
             "category",
             "visibility",
         ]
-
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -131,8 +129,8 @@ class EventService:
             cell.alignment = header_alignment
 
         # 설명 시트 추가
-        ws_info = wb.create_sheet("Information")
-        info_data = [
+        _ws_info = wb.create_sheet("Information")
+        _info_data = [
             ["Column", "Description", "Required", "Example"],
             ["artist_id", "아티스트 ID (정수)", "Yes", "1"],
             ["title", "이벤트 제목 (최대 200자)", "Yes", "2024 콘서트"],
@@ -150,6 +148,7 @@ class EventService:
                 "2024-12-25 22:00:00",
             ],
             ["location", "위치 (최대 200자)", "No", "올림픽공원"],
+
             ["category", "카테고리", "Yes", "concert, fanmeeting, showcase, etc."],
             ["visibility", "공개 설정", "No", "public, private, subscribers_only"],
         ]
@@ -338,3 +337,6 @@ class EventService:
 
         # 카테고리별 통계
         _ = {}  # category_stats not implemented yet
+
+            ["category", "카테고리"](),
+        ]
