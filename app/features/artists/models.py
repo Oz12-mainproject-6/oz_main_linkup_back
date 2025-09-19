@@ -41,8 +41,12 @@ class Artist(TimestampMixin):
     )
 
     # 기본 정보
-    real_name = fields.CharField(max_length=200, description="실명")
-    stage_name = fields.CharField(max_length=200, null=True, description="예명/그룹명")
+    stage_name = fields.CharField(
+        max_length=200, null=True, description="개인 예명 (개인 아티스트만)"
+    )
+    group_name = fields.CharField(
+        max_length=200, null=True, description="그룹명 (그룹만)"
+    )
     birthdate = fields.DateField(null=True, description="생년월일")
     gender = fields.CharField(max_length=200, null=True, description="성별")
     role = fields.CharEnumField(
@@ -53,7 +57,9 @@ class Artist(TimestampMixin):
     mbti = fields.CharField(max_length=4, null=True, description="MBTI")
     height = fields.CharField(max_length=255, null=True, description="키")
     nickname = fields.CharField(max_length=200, null=True, description="별명")
-    email = fields.CharField(max_length=200, unique=True, description="이메일")
+    email = fields.CharField(
+        max_length=200, null=True, unique=True, description="이메일"
+    )
     debut_date = fields.DateField(null=True, description="데뷔일")
 
     # 타입 및 관계

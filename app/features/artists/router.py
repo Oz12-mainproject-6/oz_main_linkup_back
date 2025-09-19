@@ -4,6 +4,7 @@ from tortoise.functions import Count
 
 from app.features.artists.models import Artist
 from app.features.artists.schemas import (
+    ArtistListPaginationResponse,
     ArtistListResponse,
     ArtistResponse,
     ArtistSubscriptionInfo,
@@ -16,15 +17,18 @@ from app.features.users.models import User
 idol_router = APIRouter(prefix="/api/idol", tags=["idol"])
 
 
-@idol_router.get("", response_model=list[ArtistListResponse])
+@idol_router.get("", response_model=ArtistListPaginationResponse)
 async def get_idol_list(
     artist_type: str | None = Query(
         None, description="아티스트 타입 필터 (group/individual)"
     ),
     limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
-    offset: int = Query(0, ge=0, description="시작 위치"),
+    page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
 ):
     """아이돌 리스트 조회 (활성 상태만)"""
+
+    # offset 계산
+    offset = (page - 1) * limit
 
     # 기본 쿼리 (활성 상태만)
     query = Artist.filter(is_active=True)
@@ -32,6 +36,9 @@ async def get_idol_list(
     # 필터 적용
     if artist_type:
         query = query.filter(artist_type=artist_type)
+
+    # 총 개수 조회
+    total = await query.count()
 
     # 인기도 정렬 (구독자 수 기준) + 페이징
     artists = (
@@ -42,7 +49,7 @@ async def get_idol_list(
     )
 
     # 각 아티스트의 프로필 이미지 조회 (FACE 타입 우선)
-    result = []
+    artist_list = []
     for artist in artists:
         profile_image_url = None
 
@@ -61,28 +68,36 @@ async def get_idol_list(
             if torso_image:
                 profile_image_url = torso_image.url
 
-        result.append(
+        artist_list.append(
             ArtistListResponse(
                 id=artist.id,
-                name=artist.stage_name
-                or artist.real_name,  # stage_name 우선, 없으면 real_name
+                name=artist.stage_name or artist.group_name or f"Artist {artist.id}",
                 profile_image=profile_image_url,
             )
         )
 
-    return result
+    # 다음 페이지 존재 여부
+    has_next = (offset + limit) < total
+
+    return ArtistListPaginationResponse(
+        artists=artist_list,
+        total=total,
+        page=page,
+        limit=limit,
+        has_next=has_next,
+    )
 
 
 @idol_router.get("/{artist_name}", response_model=ArtistResponse)
 async def get_idol_detail(artist_name: str):
     """아이돌 상세 조회 (실명 또는 예명으로 검색, 활성 상태만)"""
 
-    # 예명/실명으로 정확 검색 + 부분 검색 (활성 상태만)
+    # 예명/그룹명으로 정확 검색 + 부분 검색 (활성 상태만)
     artist = await Artist.filter(
         models.Q(stage_name__iexact=artist_name)
-        | models.Q(real_name__iexact=artist_name)
+        | models.Q(group_name__iexact=artist_name)
         | models.Q(stage_name__icontains=artist_name)
-        | models.Q(real_name__icontains=artist_name),
+        | models.Q(group_name__icontains=artist_name),
         is_active=True,
     ).first()
 
@@ -110,8 +125,8 @@ async def get_idol_detail(artist_name: str):
 
     return ArtistResponse(
         id=artist.id,
-        real_name=artist.real_name,
         stage_name=artist.stage_name,
+        group_name=artist.group_name,
         birthdate=artist.birthdate,
         gender=artist.gender,
         role=artist.role,
@@ -137,9 +152,9 @@ async def get_idol_subscription_info(
     # 아티스트 조회 (활성 상태만)
     artist = await Artist.filter(
         models.Q(stage_name__iexact=artist_name)
-        | models.Q(real_name__iexact=artist_name)
+        | models.Q(group_name__iexact=artist_name)
         | models.Q(stage_name__icontains=artist_name)
-        | models.Q(real_name__icontains=artist_name),
+        | models.Q(group_name__icontains=artist_name),
         is_active=True,
     ).first()
 
@@ -154,8 +169,8 @@ async def get_idol_subscription_info(
 
     return ArtistSubscriptionInfo(
         id=artist.id,
-        real_name=artist.real_name,
         stage_name=artist.stage_name,
+        group_name=artist.group_name,
         artist_type=artist.artist_type,
         is_subscribed=subscription is not None,
         subscription_date=subscription.created_at.isoformat() if subscription else None,

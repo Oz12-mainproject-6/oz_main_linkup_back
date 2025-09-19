@@ -178,6 +178,7 @@ class TestEmailVerification:
             json={
                 "email": "newuser@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "nickname": "newuser",
                 "user_type": "fan",
                 "verification_code": verification.code,
@@ -206,6 +207,7 @@ class TestEmailVerification:
             json={
                 "email": "newuser@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "nickname": "newuser",
                 "user_type": "fan",
                 "verification_code": "999999",  # 존재하지 않는 6자리 코드
@@ -235,6 +237,7 @@ class TestEmailVerification:
             json={
                 "email": "newuser@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "nickname": "newuser",
                 "user_type": "fan",
                 "verification_code": "123456",

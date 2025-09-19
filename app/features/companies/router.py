@@ -53,8 +53,8 @@ async def get_company_dashboard(
         dashboard_artists.append(
             DashboardArtistInfo(
                 id=artist.id,
-                real_name=artist.real_name,
                 stage_name=artist.stage_name,
+                group_name=artist.group_name,
                 artist_type=artist.artist_type,
                 debut_date=artist.debut_date,
                 is_active=artist.is_active,
@@ -71,7 +71,9 @@ async def get_company_dashboard(
                 start_time=event.start_time,
                 end_time=event.end_time,
                 category=event.category,
-                artist_name=event.artist.real_name,
+                artist_name=event.artist.stage_name
+                or event.artist.group_name
+                or f"Artist {event.artist.id}",
                 artist_stage_name=event.artist.stage_name,
             )
         )
@@ -126,7 +128,9 @@ async def get_company_events(
             visibility=event.visibility,
             is_active=event.is_active,
             artist_id=event.artist.id,
-            artist_name=event.artist.real_name,
+            artist_name=event.artist.stage_name
+            or event.artist.group_name
+            or f"Artist {event.artist.id}",
             artist_stage_name=event.artist.stage_name,
             created_at=event.created_at.isoformat(),
             updated_at=event.updated_at.isoformat(),
@@ -173,7 +177,7 @@ async def create_event(
         visibility=event.visibility,
         is_active=event.is_active,
         artist_id=artist.id,
-        artist_name=artist.real_name,
+        artist_name=artist.stage_name or artist.group_name or f"Artist {artist.id}",
         artist_stage_name=artist.stage_name,
         created_at=event.created_at.isoformat(),
         updated_at=event.updated_at.isoformat(),
@@ -220,7 +224,9 @@ async def update_event(
         visibility=event.visibility,
         is_active=event.is_active,
         artist_id=event.artist.id,
-        artist_name=event.artist.real_name,
+        artist_name=event.artist.stage_name
+        or event.artist.group_name
+        or f"Artist {event.artist.id}",
         artist_stage_name=event.artist.stage_name,
         created_at=event.created_at.isoformat(),
         updated_at=event.updated_at.isoformat(),
@@ -274,8 +280,8 @@ async def get_company_artists(
     return [
         DashboardArtistInfo(
             id=artist.id,
-            real_name=artist.real_name,
             stage_name=artist.stage_name,
+            group_name=artist.group_name,
             artist_type=artist.artist_type,
             debut_date=artist.debut_date,
             is_active=artist.is_active,
@@ -314,8 +320,8 @@ async def create_artist(
 
     artist = await Artist.create(
         company=company,
-        real_name=request.real_name,
         stage_name=request.stage_name,
+        group_name=request.group_name,
         birthdate=request.birthdate,
         gender=request.gender,
         role=request.role,

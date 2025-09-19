@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 from app.features.users.models import UserType
 
@@ -6,6 +7,7 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
+    password2: str
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
@@ -49,3 +51,17 @@ class UserResponse(BaseModel):
     user_type: UserType
     oauth_provider: str | None = None
     is_email_verified: bool = False
+
+class UserMeResponse(BaseModel):
+    id: int
+    email: Optional[EmailStr]
+    nickname: Optional[str]
+    phone_number: Optional[str]
+    user_type: UserType
+
+    class Config:
+        orm_mode = True
+
+class UserMeUpdateRequest(BaseModel):
+    nickname: Optional[str] = None
+    phone_number: Optional[str] = None

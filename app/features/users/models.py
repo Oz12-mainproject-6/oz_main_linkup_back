@@ -6,7 +6,6 @@ from tortoise import fields
 
 from app.core.mixins import TimestampMixin
 
-
 class UserType(str, Enum):
     """사용자 타입"""
 

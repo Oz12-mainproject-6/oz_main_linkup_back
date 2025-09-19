@@ -9,6 +9,7 @@ from app.features.events.models import EventCategory, Events, EventVisibility
 class EventCRUD:
     """이벤트 CRUD 클래스 (조회, 일괄 생성, 알림 관련만 남김)"""
 
+  
     @staticmethod
     async def get_list(
             skip: int = 0,
@@ -48,6 +49,7 @@ class EventCRUD:
 
         return events, total
 
+
     @staticmethod
     async def get_by_id(event_id: int) -> Events | None:
         """이벤트 상세 조회"""
@@ -58,6 +60,7 @@ class EventCRUD:
 
     @staticmethod
     async def bulk_create(events_data: list[dict]) -> tuple[int, list[str]]:
+       
         """일괄 이벤트 생성 - 트랜잭션 처리"""
         from tortoise.transactions import in_transaction
 
