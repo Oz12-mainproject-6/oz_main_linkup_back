@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from app.features.companies.router import create_event
+from app.features.companies.router import EventCreateRequest
 from app.features.events.models import EventCategory, EventVisibility
 
 KST = ZoneInfo("Asia/Seoul")
@@ -58,7 +58,7 @@ class FileUploadResponse(BaseModel):
 class BulkEventCreate(BaseModel):
     """일괄 이벤트 생성 스키마"""
 
-    events: list[create_event]
+    events: list[EventCreateRequest]
 
     class Config:
         arbitrary_types_allowed = True

@@ -34,14 +34,9 @@ class Events(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="이벤트 ID")
     artist = fields.ForeignKeyField(
-        "models.Artist",  # ✅ 이렇게 해야 함
-        related_name="events",
-        description="아티스트",
-    )
-    parent_group = fields.ForeignKeyField(
         "models.Artist",
         related_name="events",
-        description="그룹 아티스트 id",
+        description="아티스트",
     )
 
     title = fields.CharField(max_length=200, description="이벤트 제목")
