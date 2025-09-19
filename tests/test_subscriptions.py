@@ -65,7 +65,7 @@ async def company(company_user):
 async def artist(company):
     return await Artist.create(
         company=company,
-        real_name="Test Artist",
+        stage_name="Test Artist",
         email="artist@test.com",
         artist_type=ArtistType.INDIVIDUAL,
     )

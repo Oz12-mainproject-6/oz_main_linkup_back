@@ -31,6 +31,7 @@ class TestAuthSignup:
             json={
                 "email": "test@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "nickname": "testuser",
                 "user_type": "fan",
                 "verification_code": verification.code,
@@ -67,6 +68,7 @@ class TestAuthSignup:
             json={
                 "email": "test@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "nickname": "testuser2",
                 "verification_code": verification.code,
             },
@@ -90,6 +92,7 @@ class TestAuthSignup:
             json={
                 "email": "company@example.com",
                 "password": "password123",
+                "password2": "password123",
                 "user_type": "company",
                 "verification_code": verification.code,
             },

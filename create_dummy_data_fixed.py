@@ -94,8 +94,7 @@ async def create_dummy_data():
         for name, email, company_idx in artist_data:
             artist = await Artist.create(
                 company=companies[company_idx],
-                real_name=name,
-                stage_name=name,
+                group_name=name,
                 email=email,
                 artist_type=ArtistType.GROUP,
                 role=ArtistRole.LEADER,
@@ -119,9 +118,12 @@ async def create_dummy_data():
             event_type = event_types[i % 3]
             artist = artists[i % len(artists)]
 
+            artist_name = (
+                artist.stage_name or artist.group_name or f"Artist {artist.id}"
+            )
             event = await Events.create(
-                title=f"{artist.stage_name} {event_type}",
-                description=f"{artist.stage_name}의 특별한 {event_type} 이벤트",
+                title=f"{artist_name} {event_type}",
+                description=f"{artist_name}의 특별한 {event_type} 이벤트",
                 start_time=datetime.now() + timedelta(days=i * 10),
                 end_time=datetime.now() + timedelta(days=i * 10, hours=3),
                 location="서울 올림픽홀",
@@ -150,8 +152,11 @@ async def create_dummy_data():
             uploader = company_users[0]
 
             # Face 이미지
+            artist_name = (
+                artist.stage_name or artist.group_name or f"Artist {artist.id}"
+            )
             face_img = await SharedImage.create(
-                name=f"더미_{artist.stage_name}_face.jpg",
+                name=f"더미_{artist_name}_face.jpg",
                 url=f"https://picsum.photos/400/400?random={i * 2}",
                 image_type=ImageType.FACE,
                 uploaded_by=uploader,
@@ -161,7 +166,7 @@ async def create_dummy_data():
 
             # Torso 이미지
             torso_img = await SharedImage.create(
-                name=f"더미_{artist.stage_name}_torso.jpg",
+                name=f"더미_{artist_name}_torso.jpg",
                 url=f"https://picsum.photos/300/500?random={i * 2 + 1}",
                 image_type=ImageType.TORSO,
                 uploaded_by=uploader,

@@ -2,7 +2,10 @@ from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
-from starlette.status import HTTP_404_NOT_FOUND
+from loguru import logger
+from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
+
+
 
 from app.features.events.crud import EventCRUD
 from app.features.events.models import EventCategory, EventVisibility
@@ -16,6 +19,8 @@ from app.features.events.schemas import (
 from app.features.events.services import EventService
 
 event_router = APIRouter(prefix="/events", tags=["events"])
+
+
 
 
 @event_router.get("/", response_model=EventListResponse)
@@ -33,10 +38,12 @@ async def get_events(
     try:
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
+
     except ValueError as err:
         raise HTTPException(
             status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
         ) from err
+
 
     events, total = await EventCRUD.get_list(
         skip=skip,
@@ -63,7 +70,9 @@ async def get_event(event_id: int):
     return event
 
 
+
 @event_router.post("/all", response_model=FileUploadResponse)
+
 async def bulk_create_events(
     bulk_data: BulkEventCreate, background_tasks: BackgroundTasks
 ):
@@ -92,6 +101,7 @@ async def upload_events_file(
     file: UploadFile = File(...), background_tasks: BackgroundTasks = None
 ):
     """파일 업로드"""
+
     if not file.filename.endswith((".xlsx", ".csv")):
         raise HTTPException(
             status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
@@ -167,7 +177,8 @@ async def download_single_event(event_id: int):
     return StreamingResponse(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=event_{event_id}.xlsx"},
+
+        headers={"Content-Disposition": "attachment; filename=events_template.xlsx"},
     )
 
 
@@ -176,6 +187,7 @@ async def download_single_event(event_id: int):
 # ---------------------------
 @event_router.get("/file/download-all")
 async def download_bulk_events(
+
     artist_id: int | None = Query(None),
     category: EventCategory | None = Query(None),
     start_date: str | None = Query(None, description="YYYY-MM-DD format"),
@@ -193,6 +205,7 @@ async def download_bulk_events(
         ) from err
 
     file_stream = await EventService.export_to_excel(
+
         artist_id=artist_id, category=category, start_date=start_dt, end_date=end_dt
     )
 
@@ -218,6 +231,10 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
         background_tasks.add_task(EventService.trigger_notifications)
         return {"message": "Notification trigger initiated"}
     except Exception as e:
+
+        logger.error(f"Failed to trigger notifications: {str(e)}")
+    
         raise HTTPException(
             status_code=400, detail=f"File processing error: {str(e)}"
+
         ) from e
