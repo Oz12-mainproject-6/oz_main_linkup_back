@@ -93,7 +93,6 @@ class EventService:
             )
 
         except Exception as e:
-
             raise HTTPException(
                 status_code=400, detail=f"File processing error: {str(e)}"
             ) from e

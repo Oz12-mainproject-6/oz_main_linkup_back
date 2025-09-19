@@ -20,7 +20,7 @@ class SubscriptionService:
 
         # 그룹인 경우 멤버들도 자동 구독
         if artist.artist_type == "group":
-            members = await Artist.filter(parent_group_id=artist_id).all()
+            members = await Artist.filter(parent_group=artist_id).all()
 
             for member in members:
                 member_subscription, created = await Subscription.get_or_create(
@@ -41,7 +41,7 @@ class SubscriptionService:
 
         # 그룹인 경우 멤버들 구독도 해제
         if artist.artist_type == "group":
-            members = await Artist.filter(parent_group_id=artist_id).all()
+            members = await Artist.filter(parent_group=artist_id).all()
             member_ids = [member.id for member in members]
 
             await Subscription.filter(
