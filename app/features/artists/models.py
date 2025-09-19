@@ -53,7 +53,7 @@ class Artist(TimestampMixin):
     mbti = fields.CharField(max_length=4, null=True, description="MBTI")
     height = fields.CharField(max_length=255, null=True, description="키")
     nickname = fields.CharField(max_length=200, null=True, description="별명")
-    email = fields.CharField(max_length=200, unique=True, description="이메일")
+    email = fields.CharField(max_length=200, null=True, unique=True, description="이메일")
     debut_date = fields.DateField(null=True, description="데뷔일")
 
     # 타입 및 관계

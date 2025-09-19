@@ -43,3 +43,13 @@ class ArtistSubscriptionInfo(BaseModel):
     artist_type: ArtistType
     is_subscribed: bool
     subscription_date: str | None = None
+
+
+class ArtistListPaginationResponse(BaseModel):
+    """아티스트 리스트 페이지네이션 응답 스키마"""
+
+    artists: list[ArtistListResponse]
+    total: int
+    page: int
+    limit: int
+    has_next: bool
