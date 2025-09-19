@@ -10,27 +10,23 @@ class EventCRUD:
     """이벤트 CRUD 클래스 (조회, 일괄 생성, 알림 관련만 남김)"""
 
     @staticmethod
-    async def get_by_id(event_id: int) -> Events | None:
-        """ID로 이벤트 조회"""
-        try:
-            return await Events.get(id=event_id).select_related("artist")
-        except DoesNotExist:
-            return None
-
-    @staticmethod
     async def get_list(
-        skip: int = 0,
-        limit: int = 100,
-        artist_id: int | None = None,
-        category: EventCategory | None = None,
-        visibility: EventVisibility | None = None,
-        is_active: bool = True,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
+            skip: int = 0,
+            limit: int = 100,
+            artist_parent_group: int | None = None,  # 🔹 소속그룹 ID
+            artist_id: int | None = None,
+            category: EventCategory | None = None,
+            visibility: EventVisibility | None = None,
+            is_active: bool = True,
+            start_date: datetime | None = None,
+            end_date: datetime | None = None,
     ) -> tuple[list[Events], int]:
         """이벤트 목록 조회"""
-        query = Events.filter(is_active=is_active)
+        query = Events.filter(is_active=True)
 
+        # 🔹 parent_group 필터 (자기참조 FK 구조 대응)
+        if artist_parent_group is not None:
+            query = query.filter(artist_parent_group=artist_parent_group)
         if artist_id:
             query = query.filter(artist_id=artist_id)
         if category:
@@ -44,7 +40,7 @@ class EventCRUD:
 
         total = await query.count()
         events = (
-            await query.select_related("artist")
+            await query.select_related("artist", "parent_group")  # 🔹 parent_group join도 미리 해둠
             .offset(skip)
             .limit(limit)
             .order_by("-start_time")

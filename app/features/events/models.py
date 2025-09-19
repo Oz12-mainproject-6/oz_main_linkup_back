@@ -38,6 +38,11 @@ class Events(TimestampMixin):
         related_name="events",
         description="아티스트",
     )
+    parent_group = fields.ForeignKeyField(
+        "models.Artist",
+        related_name="events",
+        description="그룹 아티스트 id",
+    )
 
     title = fields.CharField(max_length=200, description="이벤트 제목")
     description = fields.TextField(null=True, description="이벤트 설명")

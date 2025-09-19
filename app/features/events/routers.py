@@ -22,10 +22,11 @@ event_router = APIRouter(prefix="/events", tags=["events"])
 async def get_events(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    artist_id: int | None = Query(None),
-    category: EventCategory | None = Query(None),
-    visibility: EventVisibility | None = Query(None),
-    is_active: bool = Query(True),
+    artist_parent_group: int | None = Query(None, description="그룹 ID"),  # 🔹 추가
+    artist_id: int | None = Query(None, description="아티스트 id"),
+    category: EventCategory | None = Query(None, description="일정 종류"),
+    visibility: EventVisibility | None = Query(None, description="공개범위"),
+    is_active: bool = Query(True, description="활동여부"),
     start_date: str | None = Query(None, description="YYYY-MM-DD format"),
     end_date: str | None = Query(None, description="YYYY-MM-DD format"),
 ):
@@ -41,6 +42,7 @@ async def get_events(
     events, total = await EventCRUD.get_list(
         skip=skip,
         limit=limit,
+        artist_parent_group=artist_parent_group,  # 🔹 EventCRUD에 전달
         artist_id=artist_id,
         category=category,
         visibility=visibility,
@@ -50,10 +52,11 @@ async def get_events(
     )
 
     return EventListResponse(
-        events=events, total=total, page=skip // limit + 1, size=limit
+        events=events,
+        total=total,
+        page=skip // limit + 1,
+        size=limit,
     )
-
-
 @event_router.get("/{event_id}", response_model=EventResponse)
 async def get_event(event_id: int):
     """이벤트 상세 조회"""
@@ -145,7 +148,6 @@ async def upload_and_create_bulk_events(
         return result
 
     except Exception as e:
-
         raise HTTPException(
             status_code=400, detail=f"File processing error: {str(e)}"
         ) from e
