@@ -10,6 +10,7 @@ from app.features.users.auth import (
     get_password_hash,
     verify_password,
 )
+from app.features.users.dependencies import get_current_user
 from app.features.users.email_service import email_service
 from app.features.users.models import EmailVerification, User
 from app.features.users.oauth import get_oauth_user_info
@@ -22,19 +23,9 @@ from app.features.users.schemas import (
     SocialLoginRequest,
     TokenResponse,
     UserResponse,
+    UserMeResponse,
+    UserMeUpdateRequest,
     VerifyEmailRequest,
-)
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from dependencies import get_current_user
-from models import User
-from pydantic import BaseModel
-from database import get_db
-
-router = APIRouter(
-    prefix="/me",
-    tags=["Me"]
 )
 
 auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
@@ -428,33 +419,36 @@ async def test_google_token(request: GoogleTokenRequest):
 async def logout():
     return {"message": "로그아웃되었습니다."}
 
-class UserProfile(BaseModel):
-    id: int
-    email: str
-    full_name: str | None
-
-    class Config:
-        orm_mode = True
-
-class UserUpdate(BaseModel):
-    full_name: str | None = None
-
-@router.get("/", response_model=UserProfile)
-def read_profile(current_user: User = Depends(get_current_user)):
+@me_router.get("/me", response_model=UserMeResponse)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """내 프로필 조회"""
     return current_user
 
-@router.patch("/", response_model=UserProfile)
-def update_profile(update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if update.full_name is not None:
-        current_user.full_name = update.full_name
 
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
+@me_router.put("/me", response_model=UserMeResponse)
+async def update_my_profile(
+    request: UserMeUpdateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """내 프로필 수정"""
+    if request.nickname is not None:
+        current_user.nickname = request.nickname
+    if request.phone_number is not None:
+        current_user.phone_number = request.phone_number
+
+    await current_user.save()
     return current_user
 
-@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
-def delete_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db.delete(current_user)
-    db.commit()
+
+@me_router.delete("/me", status_code=204)
+async def delete_my_account(current_user: User = Depends(get_current_user)):
+    """회원 탈퇴 (soft delete)"""
+    if current_user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 탈퇴한 계정입니다.",
+        )
+
+    current_user.deleted_at = datetime.now(UTC)
+    await current_user.save()
     return

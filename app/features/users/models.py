@@ -6,11 +6,6 @@ from tortoise import fields
 
 from app.core.mixins import TimestampMixin
 
-from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
-
 class UserType(str, Enum):
     """사용자 타입"""
 
@@ -126,13 +121,3 @@ class EmailVerification(TimestampMixin):
         """인증 코드를 사용됨으로 표시"""
         self.is_used = True
         await self.save()
-
-    class User(Base):
-        __tablename__ = "users"
-
-        id = Column(Integer, primary_key=True, index=True)
-        email = Column(String, unique=True, index=True, nullable=False)
-        hashed_password = Column(String, nullable=False)
-        full_name = Column(String, nullable=True)
-        is_active = Column(Boolean, default=True)
-        is_superuser = Column(Boolean, default=False)
