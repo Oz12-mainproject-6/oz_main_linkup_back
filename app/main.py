@@ -80,7 +80,8 @@ app.include_router(idol_router)
 app.include_router(companies_router)
 # 구독 라우터 등록
 app.include_router(subscriptions_router)
-
+# 포스트 라우터 등록
+app.include_router(posts_router)
 
 @app.get("/")
 async def root():
