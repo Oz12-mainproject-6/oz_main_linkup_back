@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -78,7 +77,7 @@ class LikeResponse(BaseModel):
 
 # ----------------- Post with Comments -----------------
 class PostDetailResponse(PostResponse):
-    comments: List[CommentResponse] = []
+    comments: list[CommentResponse] = []
 
     class Config:
         from_attributes = True

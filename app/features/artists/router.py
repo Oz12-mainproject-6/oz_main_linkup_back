@@ -1,20 +1,17 @@
-from datetime import date
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tortoise import models
 from tortoise.functions import Count
 
-from app.core.s3 import s3_handler
-from app.features.artists.models import Artist, ArtistType
+from app.features.artists.models import Artist
 from app.features.artists.schemas import (
     ArtistListPaginationResponse,
     ArtistListResponse,
     ArtistResponse,
     ArtistSubscriptionInfo,
 )
-from app.features.companies.models import Company
 from app.features.images.models import ImageType, SharedImage
 from app.features.notifications.models import Subscription
-from app.features.users.dependencies import get_current_user, get_current_company_user
+from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
 
 idol_router = APIRouter(prefix="/api/idol", tags=["idol"])
