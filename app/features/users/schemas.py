@@ -60,7 +60,7 @@ class UserMeResponse(BaseModel):
     user_type: UserType
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserMeUpdateRequest(BaseModel):
