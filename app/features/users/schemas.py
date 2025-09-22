@@ -6,6 +6,7 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
+    password2: str
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
@@ -42,10 +43,6 @@ class EmailVerificationResponse(BaseModel):
     email: str
 
 
-class GoogleTokenRequest(BaseModel):
-    code: str
-
-
 class UserResponse(BaseModel):
     id: int
     email: str
@@ -53,3 +50,19 @@ class UserResponse(BaseModel):
     user_type: UserType
     oauth_provider: str | None = None
     is_email_verified: bool = False
+
+
+class UserMeResponse(BaseModel):
+    id: int
+    email: EmailStr | None
+    nickname: str | None
+    phone_number: str | None
+    user_type: UserType
+
+    class Config:
+        from_attributes = True
+
+
+class UserMeUpdateRequest(BaseModel):
+    nickname: str | None = None
+    phone_number: str | None = None

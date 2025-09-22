@@ -3,24 +3,26 @@ from datetime import UTC, datetime
 from urllib.parse import unquote
 
 import httpx
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.features.users.auth import (
     create_access_token,
     get_password_hash,
     verify_password,
 )
+from app.features.users.dependencies import get_current_user
 from app.features.users.email_service import email_service
-from app.features.users.models import EmailVerification, User
+from app.features.users.models import EmailVerification, User, UserType
 from app.features.users.oauth import get_oauth_user_info
 from app.features.users.schemas import (
     EmailVerificationResponse,
-    GoogleTokenRequest,
     LoginRequest,
     SendVerificationEmailRequest,
     SignupRequest,
     SocialLoginRequest,
     TokenResponse,
+    UserMeResponse,
+    UserMeUpdateRequest,
     UserResponse,
     VerifyEmailRequest,
 )
@@ -64,6 +66,7 @@ async def signup(request: SignupRequest):
     user = await User.create(
         email=request.email,
         password=hashed_password,
+        password2=hashed_password,
         phone_number=request.phone_number,
         nickname=request.nickname,
         user_type=request.user_type,
@@ -268,29 +271,45 @@ async def verify_email(request: VerifyEmailRequest):
     )
 
 
-@auth_router.get("/test-kakao")
-async def test_kakao_oauth():
-    """카카오 OAuth 테스트용 엔드포인트"""
-    return {
-        "message": "카카오 OAuth 테스트",
-        "auth_url": f"https://kauth.kakao.com/oauth/authorize?client_id={os.getenv('KAKAO_CLIENT_ID')}&redirect_uri=http://localhost:8000/auth/kakao/callback&response_type=code",
-        "instructions": [
-            "1. auth_url로 브라우저 접속",
-            "2. 카카오 로그인 완료",
-            "3. 리다이렉트 URL에서 code 파라미터 복사",
-            "4. /api/auth/test-kakao-token에 POST 요청",
-        ],
-    }
+@auth_router.get("/kakao/login")
+async def kakao_login(user_type: str = "fan"):
+    """카카오 로그인 시작 - 카카오 로그인 페이지로 리다이렉트"""
+    kakao_client_id = os.getenv("KAKAO_CLIENT_ID")
+    # 배포 환경에 맞는 redirect_uri 설정
+    redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback"
+
+    auth_url = f"https://kauth.kakao.com/oauth/authorize?client_id={kakao_client_id}&redirect_uri={redirect_uri}&response_type=code&scope=profile_nickname,account_email&state={user_type}"
+
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=auth_url)
 
 
-@auth_router.post("/test-kakao-token")
-async def test_kakao_token(request: dict):
-    """카카오 토큰 테스트"""
+@auth_router.get("/google/login")
+async def google_login(user_type: str = "fan"):
+    """구글 로그인 시작 - 구글 로그인 페이지로 리다이렉트"""
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    # 배포 환경에 맞는 redirect_uri 설정
+    redirect_uri = "http://linkup.p-e.kr:8000/api/auth/google/callback"
+
+    auth_url = f"https://accounts.google.com/o/oauth2/auth?client_id={google_client_id}&redirect_uri={redirect_uri}&scope=openid email profile&response_type=code&access_type=offline&state={user_type}"
+
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=auth_url)
+
+
+@auth_router.get("/kakao/callback")
+async def kakao_callback(code: str, user_type: str = "fan"):
+    """카카오 OAuth 콜백 처리"""
     try:
         # URL 디코딩 처리
-        code = unquote(request.get("code", "").strip())
+        code = unquote(code.strip())
         if not code:
-            return {"error": "code 파라미터가 필요합니다"}
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Authorization code가 필요합니다.",
+            )
 
         # 토큰 요청
         async with httpx.AsyncClient() as client:
@@ -300,13 +319,15 @@ async def test_kakao_token(request: dict):
                     "grant_type": "authorization_code",
                     "client_id": os.getenv("KAKAO_CLIENT_ID"),
                     "client_secret": os.getenv("KAKAO_CLIENT_SECRET"),
-                    "redirect_uri": "http://localhost:8000/auth/kakao/callback",
+                    "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/kakao/callback",
                     "code": code,
                 },
             )
 
             if token_response.status_code != 200:
-                return {"error": "토큰 요청 실패", "detail": token_response.text}
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="토큰 요청 실패"
+                )
 
             token_data = token_response.json()
             access_token = token_data["access_token"]
@@ -318,51 +339,120 @@ async def test_kakao_token(request: dict):
             )
 
             if user_response.status_code != 200:
-                return {"error": "사용자 정보 요청 실패", "detail": user_response.text}
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="사용자 정보 요청 실패",
+                )
 
-            user_data = user_response.json()
+        # 소셜 로그인 처리
+        user_info = await get_oauth_user_info("kakao", access_token)
+        if not user_info:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="소셜 로그인 토큰이 유효하지 않습니다.",
+            )
 
-            return {
-                "success": True,
-                "access_token": access_token,
-                "user_info": user_data,
-                "test_social_login": {
-                    "url": "POST /api/auth/social-login",
-                    "body": {
-                        "provider": "kakao",
-                        "access_token": access_token,
-                        "user_type": "fan",
-                    },
-                },
+        # 기존 사용자 확인
+        user = await User.filter(
+            oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
+        ).first()
+
+        if not user:
+            # 이메일로도 확인 (기존 계정과 연동)
+            if user_info.get("email"):
+                existing_user = await User.filter(email=user_info["email"]).first()
+                if existing_user:
+                    # 기존 계정에 소셜 정보 연동
+                    existing_user.oauth_provider = user_info["provider"]
+                    existing_user.oauth_id = user_info["oauth_id"]
+                    await existing_user.save()
+                    user = existing_user
+                else:
+                    # 새 사용자 생성 (이메일 있음)
+                    user = await User.create(
+                        email=user_info.get("email"),
+                        password="",  # 소셜 로그인은 비밀번호 없음
+                        nickname=user_info.get("name"),
+                        user_type=(
+                            UserType.FAN if user_type == "fan" else UserType.COMPANY
+                        ),
+                        oauth_provider=user_info["provider"],
+                        oauth_id=user_info["oauth_id"],
+                        is_email_verified=True,  # 소셜 로그인은 이메일 인증된 것으로 처리
+                    )
+            else:
+                # 이메일 없이 새 사용자 생성
+                temp_email = (
+                    f"{user_info['provider']}_{user_info['oauth_id']}@temp.linkup.com"
+                )
+                user = await User.create(
+                    email=temp_email,
+                    password="",
+                    nickname=user_info.get("name", "카카오 사용자"),
+                    user_type=UserType.FAN if user_type == "fan" else UserType.COMPANY,
+                    oauth_provider=user_info["provider"],
+                    oauth_id=user_info["oauth_id"],
+                    is_email_verified=False,
+                )
+
+        # 마지막 로그인 시간 업데이트
+        user.last_login_at = datetime.now(UTC)
+        await user.save()
+
+        # JWT 토큰 생성
+        user_type_value = (
+            user.user_type.value
+            if hasattr(user.user_type, "value")
+            else str(user.user_type)
+        )
+        email_for_jwt = (
+            user.email if not user.email.endswith("@temp.linkup.com") else None
+        )
+
+        access_token = create_access_token(
+            data={
+                "sub": str(user.id),
+                "email": email_for_jwt,
+                "user_type": user_type_value,
             }
+        )
 
+        # 성공 페이지로 리다이렉트 (프론트엔드 URL)
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # 메인페이지로 바로 리다이렉트
+        redirect_url = (
+            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
+        )
+
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(url=redirect_url)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Kakao callback error: {type(e).__name__}: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="카카오 로그인 처리 중 오류가 발생했습니다.",
+        ) from e
 
 
-@auth_router.get("/test-google")
-async def test_google_oauth():
-    """구글 OAuth 테스트용 엔드포인트"""
-    return {
-        "message": "구글 OAuth 테스트",
-        "auth_url": f"https://accounts.google.com/o/oauth2/auth?client_id={os.getenv('GOOGLE_CLIENT_ID')}&redirect_uri=http://localhost:8000/auth/google/callback&scope=openid+email+profile&response_type=code&access_type=offline",
-        "instructions": [
-            "1. auth_url로 브라우저 접속",
-            "2. 구글 로그인 완료",
-            "3. 리다이렉트 URL에서 code 파라미터 복사",
-            "4. /api/auth/test-google-token에 POST 요청",
-        ],
-    }
-
-
-@auth_router.post("/test-google-token")
-async def test_google_token(request: GoogleTokenRequest):
-    """구글 토큰 테스트"""
+@auth_router.get("/google/callback")
+async def google_callback(code: str, user_type: str = "fan"):
+    """구글 OAuth 콜백 처리"""
     try:
         # URL 디코딩 처리
-        code = unquote(request.code.strip())
+        code = unquote(code.strip())
         if not code:
-            return {"error": "code 파라미터가 필요합니다"}
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Authorization code가 필요합니다.",
+            )
 
         # 토큰 요청
         async with httpx.AsyncClient() as client:
@@ -372,46 +462,146 @@ async def test_google_token(request: GoogleTokenRequest):
                     "grant_type": "authorization_code",
                     "client_id": os.getenv("GOOGLE_CLIENT_ID"),
                     "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-                    "redirect_uri": "http://localhost:8000/auth/google/callback",
+                    "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/google/callback",
                     "code": code,
                 },
             )
 
             if token_response.status_code != 200:
-                return {"error": "토큰 요청 실패", "detail": token_response.text}
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="토큰 요청 실패"
+                )
 
             token_data = token_response.json()
             access_token = token_data["access_token"]
 
-            # 사용자 정보 요청
-            user_response = await client.get(
-                "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"},
+        # 소셜 로그인 처리 (카카오와 동일한 로직)
+        user_info = await get_oauth_user_info("google", access_token)
+        if not user_info:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="소셜 로그인 토큰이 유효하지 않습니다.",
             )
 
-            if user_response.status_code != 200:
-                return {"error": "사용자 정보 요청 실패", "detail": user_response.text}
+        # 기존 사용자 확인 및 생성 로직 (카카오와 동일)
+        user = await User.filter(
+            oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
+        ).first()
 
-            user_data = user_response.json()
+        if not user:
+            if user_info.get("email"):
+                existing_user = await User.filter(email=user_info["email"]).first()
+                if existing_user:
+                    existing_user.oauth_provider = user_info["provider"]
+                    existing_user.oauth_id = user_info["oauth_id"]
+                    await existing_user.save()
+                    user = existing_user
+                else:
+                    user = await User.create(
+                        email=user_info.get("email"),
+                        password="",
+                        nickname=user_info.get("name"),
+                        user_type=(
+                            UserType.FAN if user_type == "fan" else UserType.COMPANY
+                        ),
+                        oauth_provider=user_info["provider"],
+                        oauth_id=user_info["oauth_id"],
+                        is_email_verified=True,
+                    )
+            else:
+                temp_email = (
+                    f"{user_info['provider']}_{user_info['oauth_id']}@temp.linkup.com"
+                )
+                user = await User.create(
+                    email=temp_email,
+                    password="",
+                    nickname=user_info.get("name", "구글 사용자"),
+                    user_type=UserType.FAN if user_type == "fan" else UserType.COMPANY,
+                    oauth_provider=user_info["provider"],
+                    oauth_id=user_info["oauth_id"],
+                    is_email_verified=False,
+                )
 
-            return {
-                "success": True,
-                "access_token": access_token,
-                "user_info": user_data,
-                "test_social_login": {
-                    "url": "POST /api/auth/social-login",
-                    "body": {
-                        "provider": "google",
-                        "access_token": access_token,
-                        "user_type": "fan",
-                    },
-                },
+        # JWT 토큰 생성 및 응답 (카카오와 동일)
+        user.last_login_at = datetime.now(UTC)
+        await user.save()
+
+        user_type_value = (
+            user.user_type.value
+            if hasattr(user.user_type, "value")
+            else str(user.user_type)
+        )
+        email_for_jwt = (
+            user.email if not user.email.endswith("@temp.linkup.com") else None
+        )
+
+        access_token = create_access_token(
+            data={
+                "sub": str(user.id),
+                "email": email_for_jwt,
+                "user_type": user_type_value,
             }
+        )
 
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # 메인페이지로 바로 리다이렉트
+        redirect_url = (
+            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
+        )
+
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(url=redirect_url)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Google callback error: {type(e).__name__}: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="구글 로그인 처리 중 오류가 발생했습니다.",
+        ) from e
 
 
 @auth_router.post("/logout")
 async def logout():
     return {"message": "로그아웃되었습니다."}
+
+
+@auth_router.get("/me", response_model=UserMeResponse)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """내 프로필 조회"""
+    return current_user
+
+
+@auth_router.put("/me", response_model=UserMeResponse)
+async def update_my_profile(
+    request: UserMeUpdateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """내 프로필 수정"""
+    if request.nickname is not None:
+        current_user.nickname = request.nickname
+    if request.phone_number is not None:
+        current_user.phone_number = request.phone_number
+
+    await current_user.save()
+    return current_user
+
+
+@auth_router.delete("/me", status_code=204)
+async def delete_my_account(current_user: User = Depends(get_current_user)):
+    """회원 탈퇴 (soft delete)"""
+    if current_user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 탈퇴한 계정입니다.",
+        )
+
+    current_user.deleted_at = datetime.now(UTC)
+    await current_user.save()
+    return
