@@ -1,7 +1,52 @@
+# Python
 .venv
 __pycache__
 *.pyc
 *.pyo
 *.pyd
+
+# Environment
 .env
+.env.local
+.env.dev
+
+# Database
 *.sqlite3
+
+# Git
+.git
+.gitignore
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+.pytest_cache
+htmlcov/
+
+# Local migrations (regenerated in container)
+migrations/
+
+# Documentation
+README.md
+docs/
+
+# GitHub
+.github/
+
+# Temporary
+tmp/
+temp/
+*.tmp
