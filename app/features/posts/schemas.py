@@ -1,65 +1,84 @@
+from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
 # ----------------- User / Artist -----------------
 class UserResponse(BaseModel):
-    user_id: int
-    user_nickname: str
+    id: int
+    nickname: str
 
     class Config:
         from_attributes = True
 
 
 class ArtistResponse(BaseModel):
-    artist_id: int
-    artist_name: str
+    id: int
+    name: str
 
     class Config:
         from_attributes = True
 
 
 # ----------------- Post -----------------
-class PostBase(BaseModel):
-    post_content: str = Field(
-        ..., min_length=1, max_length=500
-    )  # 게시글 글자 수 제한 설정
-
-
-class PostCreate(PostBase):
+class PostCreate(BaseModel):
     artist_id: int
+    post_content: str = Field(..., min_length=1, max_length=1000)
 
 
-class PostUpdate(PostBase):
-    pass
+class PostUpdate(BaseModel):
+    post_content: str = Field(..., min_length=1, max_length=1000)
 
 
-class PostResponse(PostBase):
-    post_id: int
+class PostResponse(BaseModel):
+    id: int
+    content: str
     user: UserResponse
     artist: ArtistResponse
     likes_count: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
 
 
 # ----------------- Comment -----------------
-class CommentBase(BaseModel):
-    comment_content: str
+class CommentCreate(BaseModel):
+    comment_content: str = Field(..., min_length=1, max_length=500)
 
 
-class CommentCreate(CommentBase):
-    pass
+class CommentUpdate(BaseModel):
+    comment_content: str = Field(..., min_length=1, max_length=500)
 
 
-class CommentUpdate(CommentBase):
-    pass
-
-
-class CommentResponse(CommentBase):
-    comment_id: int
-    post_id: int
+class CommentResponse(BaseModel):
+    id: int
+    content: str
     user: UserResponse
+    post_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ----------------- Like -----------------
+class LikeResponse(BaseModel):
+    id: int
+    user: UserResponse
+    post_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ----------------- Post with Comments -----------------
+class PostDetailResponse(PostResponse):
+    comments: List[CommentResponse] = []
 
     class Config:
         from_attributes = True
