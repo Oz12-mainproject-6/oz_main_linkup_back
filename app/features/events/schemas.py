@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -20,7 +19,6 @@ class EventBase(BaseModel):
     location: str | None = Field(None, max_length=200, description="위치")
     category: EventCategory = Field(..., description="이벤트 카테고리")
     visibility: EventVisibility = Field(EventVisibility.PUBLIC, description="공개 설정")
-
 
 
 class EventResponse(EventBase):
@@ -60,9 +58,7 @@ class FileUploadResponse(BaseModel):
 class BulkEventCreate(BaseModel):
     """일괄 이벤트 생성 스키마"""
 
-
     events: list[EventCreateRequest]
 
     class Config:
         arbitrary_types_allowed = True
-

@@ -421,9 +421,7 @@ async def kakao_callback(code: str, user_type: str = "fan"):
         frontend_url = os.getenv("FRONTEND_URL")
 
         # 메인페이지로 바로 리다이렉트
-        redirect_url = (
-            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
-        )
+        redirect_url = f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
 
         from fastapi.responses import RedirectResponse
 
@@ -546,9 +544,7 @@ async def google_callback(code: str, user_type: str = "fan"):
         frontend_url = os.getenv("FRONTEND_URL")
 
         # 메인페이지로 바로 리다이렉트
-        redirect_url = (
-            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
-        )
+        redirect_url = f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
 
         from fastapi.responses import RedirectResponse
 
