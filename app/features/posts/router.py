@@ -15,7 +15,7 @@ async def create_post(
     post = await models.Post.create(
         user_id=current_user.id,
         artist_id=post_in.artist_id,
-        content=post_in.content,
+        content=post_in.post_content,
     )
     await post.fetch_related("user", "artist")
     likes_count = await post.likes.count()
@@ -77,7 +77,7 @@ async def update_post(
         raise HTTPException(status_code=404, detail="Post not found")
     if post.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    post.content = post_in.content
+    post.content = post_in.post_content
     await post.save()
     likes_count = await post.likes.count()
     return schemas.PostResponse(
@@ -141,7 +141,7 @@ async def create_comment(
     comment = await models.Comment.create(
         post_id=post.id,
         user_id=current_user.id,
-        content=comment_in.content,
+        content=comment_in.comment_content,
     )
     await comment.fetch_related("user")
     return schemas.CommentResponse(
@@ -180,7 +180,7 @@ async def update_comment(
         raise HTTPException(status_code=404, detail="Comment not found")
     if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    comment.content = comment_in.content
+    comment.content = comment_in.comment_content
     await comment.save()
     return schemas.CommentResponse(
         id=comment.id,

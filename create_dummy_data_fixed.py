@@ -7,6 +7,7 @@ from app.config import TORTOISE_ORM
 from app.features.artists.models import Artist, ArtistRole, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
+from app.features.posts.models import Comment, Like, Post
 from app.features.subscriptions.models import Subscription
 from app.features.users.auth import get_password_hash
 from app.features.users.models import Company, User, UserType
@@ -20,6 +21,9 @@ async def create_dummy_data():
 
         # 기존 더미 데이터 완전 삭제 (순서 중요)
         print("🧹 기존 데이터 정리...")
+        await Like.all().delete()  # 좋아요 먼저 삭제
+        await Comment.filter(content__contains="더미").delete()  # 댓글 삭제
+        await Post.filter(content__contains="더미").delete()  # 포스트 삭제
         await SharedImage.filter(name__contains="더미").delete()
         await Subscription.all().delete()  # 간단하게 모든 구독 삭제
         await Events.filter(title__contains="더미").delete()
@@ -176,6 +180,80 @@ async def create_dummy_data():
             images.extend([face_img, torso_img])
         print(f"✅ 이미지 {len(images)}개 생성 완료")
 
+        # 8. 포스트 생성
+        print("📝 포스트 생성 중...")
+        posts = []
+        post_contents = [
+            "더미 포스트 - 오늘 정말 좋은 하루였어요! 팬분들 사랑해요 💕",
+            "더미 포스트 - 새로운 앨범 작업 중이에요! 기대해주세요 🎵",
+            "더미 포스트 - 콘서트 연습하느라 힘들지만 재밌어요 ✨",
+            "더미 포스트 - 팬분들이 보내주신 응원 메시지 잘 받았어요 ❤️",
+            "더미 포스트 - 날씨가 좋아서 기분이 좋네요! 모두 좋은 하루 되세요 ☀️",
+            "더미 포스트 - 드디어 새 곡 녹음 완료! 곧 들려드릴게요 🎤",
+            "더미 포스트 - 멤버들과 맛있는 저녁 먹었어요! 행복한 시간 🍽️",
+            "더미 포스트 - 무대 위에서 여러분과 함께할 수 있어서 감사해요 🙏"
+        ]
+        
+        for i, content in enumerate(post_contents):
+            fan = fan_users[i % len(fan_users)]
+            artist = artists[i % len(artists)]
+            
+            post = await Post.create(
+                user=fan,
+                artist=artist,
+                content=content
+            )
+            posts.append(post)
+        print(f"✅ 포스트 {len(posts)}개 생성 완료")
+
+        # 9. 댓글 생성
+        print("💬 댓글 생성 중...")
+        comments = []
+        comment_texts = [
+            "더미 댓글 - 정말 좋은 글이네요!",
+            "더미 댓글 - 항상 응원하고 있어요 💪",
+            "더미 댓글 - 멋진 포스트 감사해요!",
+            "더미 댓글 - 다음 활동도 기대할게요",
+            "더미 댓글 - 오늘도 수고하셨어요!",
+            "더미 댓글 - 건강하게 활동해주세요 ❤️",
+            "더미 댓글 - 최고예요! 사랑해요",
+            "더미 댓글 - 언제나 응원할게요!"
+        ]
+        
+        for post in posts:
+            # 각 포스트당 2-3개의 댓글 생성
+            num_comments = (hash(str(post.id)) % 3) + 1  # 1-3개 랜덤
+            for j in range(num_comments):
+                commenter = fan_users[j % len(fan_users)]
+                comment_text = comment_texts[(post.id + j) % len(comment_texts)]
+                
+                comment = await Comment.create(
+                    post=post,
+                    user=commenter,
+                    content=comment_text
+                )
+                comments.append(comment)
+        print(f"✅ 댓글 {len(comments)}개 생성 완료")
+
+        # 10. 좋아요 생성
+        print("👍 좋아요 생성 중...")
+        likes = []
+        for post in posts:
+            # 각 포스트당 1-4개의 좋아요 생성
+            num_likes = (hash(str(post.id)) % 4) + 1  # 1-4개 랜덤
+            liked_users = set()
+            
+            for j in range(num_likes):
+                liker = fan_users[j % len(fan_users)]
+                if liker.id not in liked_users:  # 중복 좋아요 방지
+                    liked_users.add(liker.id)
+                    like = await Like.create(
+                        post=post,
+                        user=liker
+                    )
+                    likes.append(like)
+        print(f"✅ 좋아요 {len(likes)}개 생성 완료")
+
         await Tortoise.close_connections()
 
         print("\n🎉 모든 더미 데이터 생성 완료!")
@@ -187,6 +265,9 @@ async def create_dummy_data():
         print(f"- 이벤트: {len(events)}개")
         print(f"- 구독: {len(subscriptions)}개")
         print(f"- 이미지: {len(images)}개")
+        print(f"- 포스트: {len(posts)}개")
+        print(f"- 댓글: {len(comments)}개")
+        print(f"- 좋아요: {len(likes)}개")
 
         print("\n👥 테스트 계정:")
         print("📌 회사 계정:")
