@@ -191,18 +191,24 @@ async def create_dummy_data():
             "더미 포스트 - 날씨가 좋아서 기분이 좋네요! 모두 좋은 하루 되세요 ☀️",
             "더미 포스트 - 드디어 새 곡 녹음 완료! 곧 들려드릴게요 🎤",
             "더미 포스트 - 멤버들과 맛있는 저녁 먹었어요! 행복한 시간 🍽️",
-            "더미 포스트 - 무대 위에서 여러분과 함께할 수 있어서 감사해요 🙏"
+            "더미 포스트 - 무대 위에서 여러분과 함께할 수 있어서 감사해요 🙏",
         ]
-        
+
+        # 실제 생성된 아티스트들을 다시 조회
+        db_artists = await Artist.filter(email__contains="dummy").all()
+        print(f"DB에서 조회한 아티스트 수: {len(db_artists)}")
+
         for i, content in enumerate(post_contents):
+            if not db_artists:
+                print("❌ 생성된 아티스트가 없습니다. 포스트 생성을 건너뛰겠습니다.")
+                break
+
             fan = fan_users[i % len(fan_users)]
-            artist = artists[i % len(artists)]
-            
-            post = await Post.create(
-                user=fan,
-                artist=artist,
-                content=content
-            )
+            artist = db_artists[i % len(db_artists)]
+
+            print(f"포스트 생성: fan_id={fan.id}, artist_id={artist.id}")
+
+            post = await Post.create(user=fan, artist=artist, content=content)
             posts.append(post)
         print(f"✅ 포스트 {len(posts)}개 생성 완료")
 
@@ -217,20 +223,18 @@ async def create_dummy_data():
             "더미 댓글 - 오늘도 수고하셨어요!",
             "더미 댓글 - 건강하게 활동해주세요 ❤️",
             "더미 댓글 - 최고예요! 사랑해요",
-            "더미 댓글 - 언제나 응원할게요!"
+            "더미 댓글 - 언제나 응원할게요!",
         ]
-        
+
         for post in posts:
             # 각 포스트당 2-3개의 댓글 생성
             num_comments = (hash(str(post.id)) % 3) + 1  # 1-3개 랜덤
             for j in range(num_comments):
                 commenter = fan_users[j % len(fan_users)]
                 comment_text = comment_texts[(post.id + j) % len(comment_texts)]
-                
+
                 comment = await Comment.create(
-                    post=post,
-                    user=commenter,
-                    content=comment_text
+                    post=post, user=commenter, content=comment_text
                 )
                 comments.append(comment)
         print(f"✅ 댓글 {len(comments)}개 생성 완료")
@@ -242,15 +246,12 @@ async def create_dummy_data():
             # 각 포스트당 1-4개의 좋아요 생성
             num_likes = (hash(str(post.id)) % 4) + 1  # 1-4개 랜덤
             liked_users = set()
-            
+
             for j in range(num_likes):
                 liker = fan_users[j % len(fan_users)]
                 if liker.id not in liked_users:  # 중복 좋아요 방지
                     liked_users.add(liker.id)
-                    like = await Like.create(
-                        post=post,
-                        user=liker
-                    )
+                    like = await Like.create(post=post, user=liker)
                     likes.append(like)
         print(f"✅ 좋아요 {len(likes)}개 생성 완료")
 

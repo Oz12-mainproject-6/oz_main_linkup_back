@@ -18,7 +18,7 @@ async def create_post(
         content=post_in.post_content,
     )
     await post.fetch_related("user", "artist")
-    likes_count = await post.likes.count()
+    likes_count = await models.Like.filter(post=post).count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
@@ -37,7 +37,7 @@ async def get_post(post_id: int):
     )
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    likes_count = await post.likes.count()
+    likes_count = await models.Like.filter(post=post).count()
 
     comments_objs = await models.Comment.filter(post_id=post_id).prefetch_related(
         "user"
@@ -79,7 +79,7 @@ async def update_post(
         raise HTTPException(status_code=403, detail="Not authorized")
     post.content = post_in.post_content
     await post.save()
-    likes_count = await post.likes.count()
+    likes_count = await models.Like.filter(post=post).count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),
@@ -117,7 +117,7 @@ async def toggle_like(post_id: int, current_user: User = Depends(get_current_use
     else:
         await models.Like.create(post_id=post.id, user_id=current_user.id)
 
-    likes_count = await post.likes.count()
+    likes_count = await models.Like.filter(post=post).count()
     return schemas.PostResponse(
         id=post.id,
         user=schemas.UserResponse.from_orm(post.user),

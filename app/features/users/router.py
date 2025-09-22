@@ -619,7 +619,9 @@ async def update_my_profile(
 
 
 @auth_router.delete("/me", status_code=204)
-async def delete_my_account(current_user: User = Depends(get_current_user), response: Response = None):
+async def delete_my_account(
+    current_user: User = Depends(get_current_user), response: Response = None
+):
     """회원 탈퇴 (soft delete)"""
     if current_user.deleted_at:
         raise HTTPException(
@@ -629,7 +631,7 @@ async def delete_my_account(current_user: User = Depends(get_current_user), resp
 
     current_user.deleted_at = datetime.now(UTC)
     await current_user.save()
-    
+
     # 쿠키에서 토큰 제거
     if response:
         response.delete_cookie(
@@ -637,5 +639,5 @@ async def delete_my_account(current_user: User = Depends(get_current_user), resp
             httponly=True,
             samesite="lax",
         )
-    
+
     return {"message": "회원 탈퇴가 완료되었습니다. 토큰이 무효화되었습니다."}
