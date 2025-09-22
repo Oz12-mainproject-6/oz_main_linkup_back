@@ -5,9 +5,9 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
 
-from app.features.events.crud import EventCRUD
+from app.features.events.services import EventCRUD, notification_service
 from app.features.events.models import EventCategory, EventVisibility
-from app.features.events.notifications import notification_service
+
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
