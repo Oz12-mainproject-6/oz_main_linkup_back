@@ -3,9 +3,7 @@ from datetime import datetime
 from typing import BinaryIO
 
 import pandas as pd
-
 from fastapi import HTTPException, UploadFile
-
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -44,7 +42,6 @@ class EventService:
 
             for index, row in df.iterrows():
                 try:
-
                     start_time = pd.to_datetime(row["start_time"])
                     end_time = (
                         pd.to_datetime(row["end_time"])
@@ -335,4 +332,3 @@ class EventService:
 
         # 카테고리별 통계 (추후 구현 예정)
         return {"total_events": len(total_events)}
-

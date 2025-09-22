@@ -3,9 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from loguru import logger
-
 from starlette.status import HTTP_404_NOT_FOUND
-
 
 from app.features.events.crud import EventCRUD
 from app.features.events.models import EventCategory, EventVisibility
@@ -19,7 +17,6 @@ from app.features.events.schemas import (
 from app.features.events.services import EventService
 
 event_router = APIRouter(prefix="/events", tags=["events"])
-
 
 
 @event_router.get("/", response_model=EventListResponse)
@@ -39,7 +36,6 @@ async def get_events(
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
 
-
     except ValueError as err:
         raise HTTPException(
             status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
@@ -58,7 +54,6 @@ async def get_events(
     )
 
     return EventListResponse(
-
         events=events,
         total=total,
         page=skip // limit + 1,
@@ -73,7 +68,6 @@ async def get_event(event_id: int):
     if not event:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Event not found")
     return event
-
 
 
 @event_router.post("/all", response_model=FileUploadResponse)
@@ -98,7 +92,6 @@ async def bulk_create_events(
         failed=len(events_data) - created_count,
         errors=errors,
     )
-
 
 
 @event_router.post("/file/upload", response_model=FileUploadResponse)
@@ -185,7 +178,6 @@ async def download_single_event(event_id: int):
     )
 
 
-
 # ---------------------------
 # 조건 기반 일괄 이벤트 다운로드
 # ---------------------------
@@ -238,4 +230,3 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
         raise HTTPException(
             status_code=400, detail=f"File processing error: {str(e)}"
         ) from e
-

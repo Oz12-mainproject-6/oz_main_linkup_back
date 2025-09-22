@@ -94,6 +94,14 @@ async def login(request: LoginRequest, response: Response):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # 탈퇴한 계정 확인
+    if user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="탈퇴한 계정입니다. 다시 가입해주세요.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # JWT 토큰 생성
     access_token = create_access_token(data={"sub": str(user.id)})
 
@@ -130,6 +138,13 @@ async def social_login(request: SocialLoginRequest):
         user = await User.filter(
             oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
         ).first()
+
+        # 탈퇴한 계정 확인
+        if user and user.deleted_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="탈퇴한 계정입니다. 다시 가입해주세요.",
+            )
 
         if not user:
             # 이메일로도 확인 (기존 계정과 연동) - 이메일이 있는 경우에만
@@ -357,6 +372,13 @@ async def kakao_callback(code: str, user_type: str = "fan"):
             oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
         ).first()
 
+        # 탈퇴한 계정 확인
+        if user and user.deleted_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="탈퇴한 계정입니다. 다시 가입해주세요.",
+            )
+
         if not user:
             # 이메일로도 확인 (기존 계정과 연동)
             if user_info.get("email"):
@@ -421,9 +443,7 @@ async def kakao_callback(code: str, user_type: str = "fan"):
         frontend_url = os.getenv("FRONTEND_URL")
 
         # 메인페이지로 바로 리다이렉트
-        redirect_url = (
-            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
-        )
+        redirect_url = f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
 
         from fastapi.responses import RedirectResponse
 
@@ -488,6 +508,13 @@ async def google_callback(code: str, user_type: str = "fan"):
             oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
         ).first()
 
+        # 탈퇴한 계정 확인
+        if user and user.deleted_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="탈퇴한 계정입니다. 다시 가입해주세요.",
+            )
+
         if not user:
             if user_info.get("email"):
                 existing_user = await User.filter(email=user_info["email"]).first()
@@ -546,9 +573,7 @@ async def google_callback(code: str, user_type: str = "fan"):
         frontend_url = os.getenv("FRONTEND_URL")
 
         # 메인페이지로 바로 리다이렉트
-        redirect_url = (
-            f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
-        )
+        redirect_url = f"{frontend_url}/?access_token={access_token}&token_type=Bearer"
 
         from fastapi.responses import RedirectResponse
 
@@ -594,7 +619,9 @@ async def update_my_profile(
 
 
 @auth_router.delete("/me", status_code=204)
-async def delete_my_account(current_user: User = Depends(get_current_user)):
+async def delete_my_account(
+    current_user: User = Depends(get_current_user), response: Response = None
+):
     """회원 탈퇴 (soft delete)"""
     if current_user.deleted_at:
         raise HTTPException(
@@ -604,4 +631,13 @@ async def delete_my_account(current_user: User = Depends(get_current_user)):
 
     current_user.deleted_at = datetime.now(UTC)
     await current_user.save()
-    return
+
+    # 쿠키에서 토큰 제거
+    if response:
+        response.delete_cookie(
+            key="access_token",
+            httponly=True,
+            samesite="lax",
+        )
+
+    return {"message": "회원 탈퇴가 완료되었습니다. 토큰이 무효화되었습니다."}
