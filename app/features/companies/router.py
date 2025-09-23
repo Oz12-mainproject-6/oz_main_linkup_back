@@ -273,7 +273,7 @@ async def delete_event(
 @companies_router.get("/artists", response_model=list[DashboardArtistInfo])
 async def get_company_artists(
     user_company: tuple[User, Company] = Depends(get_current_company_user),
-    is_active: bool | None = Query(None, description="활동 상태 필터"),
+    is_active: bool | None = Query(True, description="활동 상태 필터 (기본값: True)"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
