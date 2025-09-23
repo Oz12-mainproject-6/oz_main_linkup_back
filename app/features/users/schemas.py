@@ -65,3 +65,9 @@ class UserMeResponse(BaseModel):
 class UserMeUpdateRequest(BaseModel):
     nickname: str | None = None
     phone_number: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str
