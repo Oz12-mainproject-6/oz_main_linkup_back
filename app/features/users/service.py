@@ -1,4 +1,4 @@
-import os
+import os, traceback
 from datetime import UTC, datetime
 from urllib.parse import unquote
 
@@ -19,7 +19,6 @@ from app.features.users.schemas import (
     PasswordChangeRequest,
     SendVerificationEmailRequest,
     SignupRequest,
-    SocialLoginRequest,
     TokenResponse,
     UserMeUpdateRequest,
     UserResponse,
@@ -112,16 +111,6 @@ class UserService:
 
         # JWT 토큰 생성
         access_token = create_access_token(data={"sub": str(user.id)})
-
-        # 쿠키에 토큰 설정 (개발 환경에서만)
-        if os.getenv("ENVIRONMENT") == "development":
-            response.set_cookie(
-                key="access_token",
-                value=f"Bearer {access_token}",
-                httponly=True,
-                max_age=1800,  # 30분
-                samesite="lax",
-            )
 
         # 마지막 로그인 시간 업데이트
         user.last_login_at = datetime.now(UTC)
@@ -308,7 +297,7 @@ class UserService:
         """OAuth 로그인 리다이렉트 URL 생성"""
         if provider == "kakao":
             client_id = os.getenv("KAKAO_CLIENT_ID")
-            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback"
+            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback" # redirect_uri도 env에서 관리하는가?
             return f"https://kauth.kakao.com/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope=profile_nickname,account_email&state={user_type}"
         elif provider == "google":
             client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -380,7 +369,7 @@ class UserService:
             raise
         except Exception as e:
             print(f"{provider.title()} callback error: {type(e).__name__}: {str(e)}")
-            import traceback
+
 
             traceback.print_exc()
             raise HTTPException(
