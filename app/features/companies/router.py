@@ -322,11 +322,11 @@ async def get_artist_detail(
     face_image = await SharedImage.filter(
         artist=artist, image_type=ImageType.FACE
     ).first()
-    
+
     torso_image = await SharedImage.filter(
         artist=artist, image_type=ImageType.TORSO
     ).first()
-    
+
     banner_image = await SharedImage.filter(
         artist=artist, image_type=ImageType.BANNER
     ).first()
