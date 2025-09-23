@@ -273,7 +273,7 @@ async def delete_event(
 @companies_router.get("/artists", response_model=list[DashboardArtistInfo])
 async def get_company_artists(
     user_company: tuple[User, Company] = Depends(get_current_company_user),
-    is_active: bool | None = Query(None, description="활동 상태 필터"),
+    is_active: bool | None = Query(True, description="활동 상태 필터 (기본값: True)"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
@@ -293,12 +293,57 @@ async def get_company_artists(
             stage_name=artist.stage_name,
             group_name=artist.group_name,
             artist_type=artist.artist_type,
+            birth_date=artist.birthdate,
             debut_date=artist.debut_date,
             is_active=artist.is_active,
             event_count=0,  # 필요시 별도 계산
         )
         for artist in artists
     ]
+
+
+@companies_router.get("/artists/{artist_id}", response_model=DashboardArtistInfo)
+async def get_artist_detail(
+    artist_id: int,
+    user_company: tuple[User, Company] = Depends(get_current_company_user),
+):
+    """특정 아티스트 상세 조회 (이미지 포함)"""
+    current_user, company = user_company
+
+    # 해당 아티스트가 본인 소속사 것인지 확인
+    artist = await Artist.get_or_none(id=artist_id, company=company)
+    if not artist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 아티스트를 찾을 수 없습니다.",
+        )
+
+    # 각 타입별 이미지 조회
+    face_image = await SharedImage.filter(
+        artist=artist, image_type=ImageType.FACE
+    ).first()
+
+    torso_image = await SharedImage.filter(
+        artist=artist, image_type=ImageType.TORSO
+    ).first()
+
+    banner_image = await SharedImage.filter(
+        artist=artist, image_type=ImageType.BANNER
+    ).first()
+
+    return DashboardArtistInfo(
+        id=artist.id,
+        stage_name=artist.stage_name,
+        group_name=artist.group_name,
+        artist_type=artist.artist_type,
+        birth_date=artist.birthdate,
+        debut_date=artist.debut_date,
+        is_active=artist.is_active,
+        event_count=0,  # 필요시 별도 계산
+        face_url=face_image.url if face_image else None,
+        torso_url=torso_image.url if torso_image else None,
+        banner_url=banner_image.url if banner_image else None,
+    )
 
 
 # @companies_router.post("/artists")

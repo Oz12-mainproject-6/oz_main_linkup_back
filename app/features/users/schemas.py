@@ -6,7 +6,6 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    password2: str
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
@@ -66,3 +65,9 @@ class UserMeResponse(BaseModel):
 class UserMeUpdateRequest(BaseModel):
     nickname: str | None = None
     phone_number: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str

@@ -41,7 +41,7 @@ async def create_dummy_data():
             user_type=UserType.ADMIN,
             is_email_verified=True,
         )
-        print(f"✅ 관리자 1개 생성 완료")
+        print("✅ 관리자 1개 생성 완료")
 
         # 2. 회사 사용자 생성
         print("👔 회사 사용자 생성 중...")
@@ -83,8 +83,16 @@ async def create_dummy_data():
         print("👥 팬 사용자 생성 중...")
         fan_users = []
         fan_names = [
-            "김팬", "이팬", "박팬", "최팬", "정팬", 
-            "장팬", "윤팬", "임팬", "한팬", "오팬"
+            "김팬",
+            "이팬",
+            "박팬",
+            "최팬",
+            "정팬",
+            "장팬",
+            "윤팬",
+            "임팬",
+            "한팬",
+            "오팬",
         ]
 
         for i, name in enumerate(fan_names):
@@ -271,7 +279,7 @@ async def create_dummy_data():
 
         print("\n🎉 모든 더미 데이터 생성 완료!")
         print("\n📊 생성된 데이터:")
-        print(f"- 관리자: 1개")
+        print("- 관리자: 1개")
         print(f"- 회사: {len(companies)}개")
         print(f"- 회사 사용자: {len(company_users)}개")
         print(f"- 팬 사용자: {len(fan_users)}개")

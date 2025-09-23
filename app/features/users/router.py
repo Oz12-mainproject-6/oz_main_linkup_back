@@ -17,6 +17,7 @@ from app.features.users.oauth import get_oauth_user_info
 from app.features.users.schemas import (
     EmailVerificationResponse,
     LoginRequest,
+    PasswordChangeRequest,
     SendVerificationEmailRequest,
     SignupRequest,
     SocialLoginRequest,
@@ -66,7 +67,6 @@ async def signup(request: SignupRequest):
     user = await User.create(
         email=request.email,
         password=hashed_password,
-        password2=hashed_password,
         phone_number=request.phone_number,
         nickname=request.nickname,
         user_type=request.user_type,
@@ -622,6 +622,47 @@ async def update_my_profile(
 
     await current_user.save()
     return current_user
+
+
+@auth_router.put("/me/password")
+async def change_password(
+    request: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """비밀번호 변경"""
+    # 소셜 로그인 사용자는 비밀번호 변경 불가
+    if current_user.oauth_provider:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.",
+        )
+
+    # 현재 비밀번호 확인
+    if not verify_password(request.current_password, current_user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 비밀번호가 올바르지 않습니다.",
+        )
+
+    # 새 비밀번호 확인
+    if request.new_password != request.new_password_confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
+        )
+
+    # 새 비밀번호가 현재와 동일한지 확인
+    if verify_password(request.new_password, current_user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호는 현재 비밀번호와 달라야 합니다.",
+        )
+
+    # 비밀번호 해시화 및 저장
+    current_user.password = get_password_hash(request.new_password)
+    await current_user.save()
+
+    return {"message": "비밀번호가 성공적으로 변경되었습니다."}
 
 
 @auth_router.delete("/me", status_code=204)

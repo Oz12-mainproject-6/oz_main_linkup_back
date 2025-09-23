@@ -13,9 +13,13 @@ class DashboardArtistInfo(BaseModel):
     stage_name: str | None = None
     group_name: str | None = None
     artist_type: ArtistType
+    birth_date: date | None = None
     debut_date: date | None = None
     is_active: bool
     event_count: int = 0  # 이번 달 이벤트 수
+    face_url: str | None = None
+    torso_url: str | None = None
+    banner_url: str | None = None
 
 
 class DashboardEventInfo(BaseModel):
