@@ -179,7 +179,6 @@ async def create_dummy_data():
                 image_type=ImageType.FACE,
                 uploaded_by=uploader,
                 artist=artist,
-                is_public=True,
             )
 
             # Torso 이미지
@@ -189,7 +188,6 @@ async def create_dummy_data():
                 image_type=ImageType.TORSO,
                 uploaded_by=uploader,
                 artist=artist,
-                is_public=True,
             )
             images.extend([face_img, torso_img])
         print(f"✅ 이미지 {len(images)}개 생성 완료")

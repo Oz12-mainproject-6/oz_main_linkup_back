@@ -52,9 +52,6 @@ class SharedImage(TimestampMixin):
         description="이미지 타입",
     )
 
-    # 공개 설정
-    is_public = fields.BooleanField(default=True, description="구독자가 사용 가능한지")
-
     class Meta:
         table = "shared_image"
 
