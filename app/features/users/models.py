@@ -12,6 +12,8 @@ class UserType(str, Enum):
 
     FAN = "fan"
     COMPANY = "company"
+    SUPERUSER = "superuser"
+    BAN = "ban"
 
 
 class User(TimestampMixin):
