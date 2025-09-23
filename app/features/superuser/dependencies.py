@@ -36,8 +36,8 @@ async def get_superuser_bypass_ban(
             detail="사용자를 찾을 수 없습니다.",
         )
 
-    # 슈퍼유저 권한 체크
-    if user.user_type not in [UserType.SUPERUSER, UserType.COMPANY]:
+    # 관리자 권한 체크
+    if user.user_type not in [UserType.ADMIN, UserType.COMPANY]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="슈퍼유저만 접근 가능합니다.",

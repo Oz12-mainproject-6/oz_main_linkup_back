@@ -12,7 +12,7 @@ class UserType(str, Enum):
 
     FAN = "fan"
     COMPANY = "company"
-    SUPERUSER = "superuser"
+    ADMIN = "admin"
     BAN = "ban"
 
 

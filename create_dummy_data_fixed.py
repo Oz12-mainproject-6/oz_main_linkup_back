@@ -32,16 +32,16 @@ async def create_dummy_data():
         await User.filter(email__contains="dummy").delete()
         print("✅ 기존 데이터 정리 완료")
 
-        # 1. 슈퍼유저 생성
-        print("👑 슈퍼유저 생성 중...")
-        superuser = await User.create(
-            email="admin_dummy@superuser.com",
+        # 1. 관리자 생성
+        print("👑 관리자 생성 중...")
+        admin_user = await User.create(
+            email="admin_dummy@admin.com",
             password=get_password_hash("admin123!"),
             nickname="관리자",
-            user_type=UserType.SUPERUSER,
+            user_type=UserType.ADMIN,
             is_email_verified=True,
         )
-        print(f"✅ 슈퍼유저 1개 생성 완료")
+        print(f"✅ 관리자 1개 생성 완료")
 
         # 2. 회사 사용자 생성
         print("👔 회사 사용자 생성 중...")
@@ -273,7 +273,7 @@ async def create_dummy_data():
 
         print("\n🎉 모든 더미 데이터 생성 완료!")
         print("\n📊 생성된 데이터:")
-        print(f"- 슈퍼유저: 1개")
+        print(f"- 관리자: 1개")
         print(f"- 회사: {len(companies)}개")
         print(f"- 회사 사용자: {len(company_users)}개")
         print(f"- 팬 사용자: {len(fan_users)}개")
@@ -286,8 +286,8 @@ async def create_dummy_data():
         print(f"- 좋아요: {len(likes)}개")
 
         print("\n👥 테스트 계정:")
-        print("📌 슈퍼유저 계정:")
-        print(f"  - {superuser.email} / admin123!")
+        print("📌 관리자 계정:")
+        print(f"  - {admin_user.email} / admin123!")
         print("📌 회사 계정:")
         for user in company_users:
             print(f"  - {user.email} / company123!")
