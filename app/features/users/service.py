@@ -129,56 +129,56 @@ class UserService:
 
         return TokenResponse(access_token=access_token)
 
-    @staticmethod
-    async def social_login(request: SocialLoginRequest) -> TokenResponse:
-        """소셜 로그인 처리"""
-        try:
-            # OAuth 제공자에서 사용자 정보 가져오기
-            user_info = await get_oauth_user_info(
-                request.provider, request.access_token
-            )
-            if not user_info:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="소셜 로그인 토큰이 유효하지 않습니다.",
-                )
-
-            # 기존 사용자 확인
-            user = await User.filter(
-                oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
-            ).first()
-
-            # 탈퇴한 계정 확인
-            if user and user.deleted_at:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="탈퇴한 계정입니다. 다시 가입해주세요.",
-                )
-
-            if not user:
-                user = await UserService._create_or_link_social_user(
-                    user_info, request.user_type
-                )
-
-            # 마지막 로그인 시간 업데이트
-            user.last_login_at = datetime.now(UTC)
-            await user.save()
-
-            # JWT 토큰 생성
-            access_token = UserService._create_jwt_token(user)
-            return TokenResponse(access_token=access_token)
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"Social login error: {type(e).__name__}: {str(e)}")
-            import traceback
-
-            traceback.print_exc()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="소셜 로그인 처리 중 오류가 발생했습니다.",
-            ) from e
+    # @staticmethod
+    # async def social_login(request: SocialLoginRequest) -> TokenResponse:
+    #     """소셜 로그인 처리"""
+    #     try:
+    #         # OAuth 제공자에서 사용자 정보 가져오기
+    #         user_info = await get_oauth_user_info(
+    #             request.provider, request.access_token
+    #         )
+    #         if not user_info:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_401_UNAUTHORIZED,
+    #                 detail="소셜 로그인 토큰이 유효하지 않습니다.",
+    #             )
+    #
+    #         # 기존 사용자 확인
+    #         user = await User.filter(
+    #             oauth_provider=user_info["provider"], oauth_id=user_info["oauth_id"]
+    #         ).first()
+    #
+    #         # 탈퇴한 계정 확인
+    #         if user and user.deleted_at:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_401_UNAUTHORIZED,
+    #                 detail="탈퇴한 계정입니다. 다시 가입해주세요.",
+    #             )
+    #
+    #         if not user:
+    #             user = await UserService._create_or_link_social_user(
+    #                 user_info, request.user_type
+    #             )
+    #
+    #         # 마지막 로그인 시간 업데이트
+    #         user.last_login_at = datetime.now(UTC)
+    #         await user.save()
+    #
+    #         # JWT 토큰 생성
+    #         access_token = UserService._create_jwt_token(user)
+    #         return TokenResponse(access_token=access_token)
+    #
+    #     except HTTPException:
+    #         raise
+    #     except Exception as e:
+    #         print(f"Social login error: {type(e).__name__}: {str(e)}")
+    #         import traceback
+    #
+    #         traceback.print_exc()
+    #         raise HTTPException(
+    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #             detail="소셜 로그인 처리 중 오류가 발생했습니다.",
+    #         ) from e
 
     @staticmethod
     async def _create_or_link_social_user(user_info: dict, user_type: UserType) -> User:

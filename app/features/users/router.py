@@ -33,10 +33,10 @@ async def login(request: LoginRequest, response: Response):
     return await UserService.login(request, response)
 
 
-@auth_router.post("/social-login", response_model=TokenResponse)
-async def social_login(request: SocialLoginRequest):
-    """소셜 로그인 (구글, 카카오)"""
-    return await UserService.social_login(request)
+# @auth_router.post("/social-login", response_model=TokenResponse)
+# async def social_login(request: SocialLoginRequest):
+#     """소셜 로그인 (구글, 카카오)"""
+#     return await UserService.social_login(request)
 
 
 @auth_router.post("/send-verification-email", response_model=EmailVerificationResponse)
