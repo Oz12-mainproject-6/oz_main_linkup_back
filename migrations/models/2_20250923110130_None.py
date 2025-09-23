@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS "user" (
     "password" VARCHAR(200) NOT NULL,
     "phone_number" VARCHAR(20),
     "nickname" VARCHAR(50),
-    "user_type" VARCHAR(7) NOT NULL DEFAULT 'fan',
+    "user_type" VARCHAR(9) NOT NULL DEFAULT 'fan',
     "push_notification_enabled" BOOL NOT NULL DEFAULT True,
     "in_app_notification_enabled" BOOL NOT NULL DEFAULT True,
     "oauth_provider" VARCHAR(50),

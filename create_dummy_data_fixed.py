@@ -32,7 +32,18 @@ async def create_dummy_data():
         await User.filter(email__contains="dummy").delete()
         print("✅ 기존 데이터 정리 완료")
 
-        # 1. 회사 사용자 생성
+        # 1. 슈퍼유저 생성
+        print("👑 슈퍼유저 생성 중...")
+        superuser = await User.create(
+            email="admin_dummy@superuser.com",
+            password=get_password_hash("admin123!"),
+            nickname="관리자",
+            user_type=UserType.SUPERUSER,
+            is_email_verified=True,
+        )
+        print(f"✅ 슈퍼유저 1개 생성 완료")
+
+        # 2. 회사 사용자 생성
         print("👔 회사 사용자 생성 중...")
         company_users = []
         company_data = [
@@ -52,7 +63,7 @@ async def create_dummy_data():
             company_users.append(user)
         print(f"✅ 회사 사용자 {len(company_users)}개 생성 완료")
 
-        # 2. 회사 프로필 생성
+        # 3. 회사 프로필 생성
         print("🏢 회사 프로필 생성 중...")
         companies = []
         for i, (user, (name, _)) in enumerate(
@@ -68,10 +79,13 @@ async def create_dummy_data():
             companies.append(company)
         print(f"✅ 회사 프로필 {len(companies)}개 생성 완료")
 
-        # 3. 팬 사용자 생성
+        # 4. 팬 사용자 생성
         print("👥 팬 사용자 생성 중...")
         fan_users = []
-        fan_names = ["김팬", "이팬", "박팬", "최팬", "정팬"]
+        fan_names = [
+            "김팬", "이팬", "박팬", "최팬", "정팬", 
+            "장팬", "윤팬", "임팬", "한팬", "오팬"
+        ]
 
         for i, name in enumerate(fan_names):
             user = await User.create(
@@ -84,7 +98,7 @@ async def create_dummy_data():
             fan_users.append(user)
         print(f"✅ 팬 사용자 {len(fan_users)}개 생성 완료")
 
-        # 4. 아티스트 생성 (필수 필드만)
+        # 5. 아티스트 생성 (필수 필드만)
         print("🎤 아티스트 생성 중...")
         artists = []
         artist_data = [
@@ -108,7 +122,7 @@ async def create_dummy_data():
             artists.append(artist)
         print(f"✅ 아티스트 {len(artists)}개 생성 완료")
 
-        # 5. 이벤트 생성
+        # 6. 이벤트 생성
         print("📅 이벤트 생성 중...")
         events = []
         event_types = ["더미 팬미팅", "더미 콘서트", "더미 쇼케이스"]
@@ -137,7 +151,7 @@ async def create_dummy_data():
             events.append(event)
         print(f"✅ 이벤트 {len(events)}개 생성 완료")
 
-        # 6. 구독 관계 생성
+        # 7. 구독 관계 생성
         print("💝 구독 관계 생성 중...")
         subscriptions = []
         for fan in fan_users:
@@ -148,7 +162,7 @@ async def create_dummy_data():
                 subscriptions.append(subscription)
         print(f"✅ 구독 관계 {len(subscriptions)}개 생성 완료")
 
-        # 7. 이미지 생성
+        # 8. 이미지 생성
         print("🖼️ 이미지 생성 중...")
         images = []
         for i, artist in enumerate(artists):
@@ -180,7 +194,7 @@ async def create_dummy_data():
             images.extend([face_img, torso_img])
         print(f"✅ 이미지 {len(images)}개 생성 완료")
 
-        # 8. 포스트 생성
+        # 9. 포스트 생성
         print("📝 포스트 생성 중...")
         posts = []
         post_contents = [
@@ -212,7 +226,7 @@ async def create_dummy_data():
             posts.append(post)
         print(f"✅ 포스트 {len(posts)}개 생성 완료")
 
-        # 9. 댓글 생성
+        # 10. 댓글 생성
         print("💬 댓글 생성 중...")
         comments = []
         comment_texts = [
@@ -239,7 +253,7 @@ async def create_dummy_data():
                 comments.append(comment)
         print(f"✅ 댓글 {len(comments)}개 생성 완료")
 
-        # 10. 좋아요 생성
+        # 11. 좋아요 생성
         print("👍 좋아요 생성 중...")
         likes = []
         for post in posts:
@@ -259,6 +273,7 @@ async def create_dummy_data():
 
         print("\n🎉 모든 더미 데이터 생성 완료!")
         print("\n📊 생성된 데이터:")
+        print(f"- 슈퍼유저: 1개")
         print(f"- 회사: {len(companies)}개")
         print(f"- 회사 사용자: {len(company_users)}개")
         print(f"- 팬 사용자: {len(fan_users)}개")
@@ -271,6 +286,8 @@ async def create_dummy_data():
         print(f"- 좋아요: {len(likes)}개")
 
         print("\n👥 테스트 계정:")
+        print("📌 슈퍼유저 계정:")
+        print(f"  - {superuser.email} / admin123!")
         print("📌 회사 계정:")
         for user in company_users:
             print(f"  - {user.email} / company123!")
