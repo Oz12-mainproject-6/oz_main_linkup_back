@@ -1,4 +1,5 @@
-import os, traceback
+import os
+import traceback
 from datetime import UTC, datetime
 from urllib.parse import unquote
 
@@ -297,7 +298,7 @@ class UserService:
         """OAuth 로그인 리다이렉트 URL 생성"""
         if provider == "kakao":
             client_id = os.getenv("KAKAO_CLIENT_ID")
-            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback" # redirect_uri도 env에서 관리하는가?
+            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback"  # redirect_uri도 env에서 관리하는가?
             return f"https://kauth.kakao.com/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope=profile_nickname,account_email&state={user_type}"
         elif provider == "google":
             client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -369,7 +370,6 @@ class UserService:
             raise
         except Exception as e:
             print(f"{provider.title()} callback error: {type(e).__name__}: {str(e)}")
-
 
             traceback.print_exc()
             raise HTTPException(
@@ -476,13 +476,5 @@ class UserService:
 
         user.deleted_at = datetime.now(UTC)
         await user.save()
-
-        # 쿠키에서 토큰 제거
-        if response:
-            response.delete_cookie(
-                key="access_token",
-                httponly=True,
-                samesite="lax",
-            )
 
         return {"message": "회원 탈퇴가 완료되었습니다. 토큰이 무효화되었습니다."}

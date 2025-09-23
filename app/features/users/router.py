@@ -9,7 +9,6 @@ from app.features.users.schemas import (
     PasswordChangeRequest,
     SendVerificationEmailRequest,
     SignupRequest,
-    SocialLoginRequest,
     TokenResponse,
     UserMeResponse,
     UserMeUpdateRequest,
