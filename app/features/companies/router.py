@@ -1,11 +1,20 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
-from app.features.artists.models import Artist
+from app.core.s3 import s3_handler
+from app.features.artists.models import Artist, ArtistType
 from app.features.companies.dependencies import get_current_company_user
 from app.features.companies.schemas import (
-    ArtistCreateRequest,
     ArtistUpdateRequest,
     CompanyDashboardResponse,
     DashboardArtistInfo,
@@ -15,6 +24,7 @@ from app.features.companies.schemas import (
     EventUpdateRequest,
 )
 from app.features.events.models import Events
+from app.features.images.models import ImageType, SharedImage
 from app.features.users.models import Company, User
 
 companies_router = APIRouter(prefix="/api/companies", tags=["companies"])
@@ -291,51 +301,147 @@ async def get_company_artists(
     ]
 
 
-@companies_router.post("/artists")
-async def create_artist(
-    request: ArtistCreateRequest,
+# @companies_router.post("/artists")
+# async def create_artist(
+#     request: ArtistCreateRequest,
+#     user_company: tuple[User, Company] = Depends(get_current_company_user),
+# ):
+#     """아티스트 생성 (이미지 없음) - DEPRECATED: /artists/with-images 사용 권장"""
+#     current_user, company = user_company
+
+#     # 이메일 중복 체크
+#     existing_artist = await Artist.filter(email=request.email).first()
+#     if existing_artist:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST, detail="이미 등록된 이메일입니다."
+#         )
+
+#     # parent_group 확인 (멤버인 경우)
+#     parent_group = None
+#     if request.parent_group_id:
+#         parent_group = await Artist.get_or_none(
+#             id=request.parent_group_id, company=company, artist_type="group"
+#         )
+#         if not parent_group:
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="해당 그룹을 찾을 수 없습니다.",
+#             )
+
+#     artist = await Artist.create(
+#         company=company,
+#         stage_name=request.stage_name,
+#         group_name=request.group_name,
+#         birthdate=request.birthdate,
+#         gender=request.gender,
+#         role=request.role,
+#         mbti=request.mbti,
+#         height=request.height,
+#         nickname=request.nickname,
+#         email=request.email,
+#         debut_date=request.debut_date,
+#         artist_type=request.artist_type,
+#         parent_group=parent_group,
+#         member_count=request.member_count,
+#     )
+
+#     return {"message": "아티스트가 생성되었습니다.", "artist_id": artist.id}
+
+
+@companies_router.post("/artists/with-images")
+async def create_artist_with_images(
+    stage_name: str = Form(None),
+    group_name: str = Form(None),
+    debut_date: date = Form(None),
+    birthdate: date = Form(None),
+    artist_type: ArtistType = Form(...),
+    face_image: UploadFile = File(None),
+    torso_image: UploadFile = File(None),
+    banner_image: UploadFile = File(None),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
-    """아티스트 생성"""
+    """아티스트 + 이미지 3개 통합 생성"""
     current_user, company = user_company
 
-    # 이메일 중복 체크
-    existing_artist = await Artist.filter(email=request.email).first()
-    if existing_artist:
+    # stage_name 또는 group_name 중 하나는 필수
+    if not stage_name and not group_name:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="이미 등록된 이메일입니다."
+            status_code=400, detail="stage_name 또는 group_name 중 하나는 필수입니다"
         )
 
-    # parent_group 확인 (멤버인 경우)
-    parent_group = None
-    if request.parent_group_id:
-        parent_group = await Artist.get_or_none(
-            id=request.parent_group_id, company=company, artist_type="group"
-        )
-        if not parent_group:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 그룹을 찾을 수 없습니다.",
-            )
-
+    # 1. Artist 생성
     artist = await Artist.create(
         company=company,
-        stage_name=request.stage_name,
-        group_name=request.group_name,
-        birthdate=request.birthdate,
-        gender=request.gender,
-        role=request.role,
-        mbti=request.mbti,
-        height=request.height,
-        nickname=request.nickname,
-        email=request.email,
-        debut_date=request.debut_date,
-        artist_type=request.artist_type,
-        parent_group=parent_group,
-        member_count=request.member_count,
+        stage_name=stage_name,
+        group_name=group_name,
+        debut_date=debut_date,
+        birthdate=birthdate,
+        artist_type=artist_type,
     )
 
-    return {"message": "아티스트가 생성되었습니다.", "artist_id": artist.id}
+    # 2. 이미지 3개 업로드 및 SharedImage 생성 (선택사항)
+    try:
+        face_url = None
+        torso_url = None
+        banner_url = None
+
+        # Face 이미지 업로드 (있는 경우에만)
+        if face_image:
+            face_url = await s3_handler.upload_file(face_image, folder="face")
+            if face_url:
+                await SharedImage.create(
+                    url=face_url,
+                    name=face_image.filename,
+                    size=face_image.size,
+                    content_type=face_image.content_type,
+                    uploaded_by=current_user,
+                    artist=artist,
+                    image_type=ImageType.FACE,
+                )
+
+        # Torso 이미지 업로드 (있는 경우에만)
+        if torso_image:
+            torso_url = await s3_handler.upload_file(torso_image, folder="torso")
+            if torso_url:
+                await SharedImage.create(
+                    url=torso_url,
+                    name=torso_image.filename,
+                    size=torso_image.size,
+                    content_type=torso_image.content_type,
+                    uploaded_by=current_user,
+                    artist=artist,
+                    image_type=ImageType.TORSO,
+                )
+
+        # Banner 이미지 업로드 (있는 경우에만)
+        if banner_image:
+            banner_url = await s3_handler.upload_file(banner_image, folder="banner")
+            if banner_url:
+                await SharedImage.create(
+                    url=banner_url,
+                    name=banner_image.filename,
+                    size=banner_image.size,
+                    content_type=banner_image.content_type,
+                    uploaded_by=current_user,
+                    artist=artist,
+                    image_type=ImageType.BANNER,
+                )
+
+    except Exception as e:
+        # 이미지 업로드 실패 시 아티스트도 삭제
+        await artist.delete()
+        raise HTTPException(
+            status_code=500, detail=f"이미지 업로드 실패: {str(e)}"
+        ) from e
+
+    return {
+        "message": "아티스트 및 이미지가 성공적으로 생성되었습니다.",
+        "artist_id": artist.id,
+        "artist_name": artist.stage_name or artist.group_name,
+        "face_image_url": face_url,
+        "torso_image_url": torso_url,
+        "banner_image_url": banner_url,
+    }
 
 
 @companies_router.put("/artists/{artist_id}")

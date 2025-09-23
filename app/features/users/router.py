@@ -101,6 +101,12 @@ async def login(request: LoginRequest, response: Response):
             detail="탈퇴한 계정입니다. 다시 가입해주세요.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # 밴 유저 확인
+    if user.user_type == UserType.BAN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="계정이 차단되어 서비스를 이용할 수 없습니다.",
+        )
 
     # JWT 토큰 생성
     access_token = create_access_token(data={"sub": str(user.id)})

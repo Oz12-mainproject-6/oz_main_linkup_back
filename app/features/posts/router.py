@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.features.artists.models import Artist
@@ -39,8 +37,7 @@ async def create_post(
         content=post.content,
         user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
         artist=schemas.ArtistResponse(
-            id=post.artist.id, 
-            name=post.artist.stage_name or post.artist.group_name
+            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
         ),
         likes_count=likes_count,
         created_at=post.created_at,
@@ -48,7 +45,7 @@ async def create_post(
     )
 
 
-@posts_router.get("/", response_model=List[schemas.PostResponse])
+@posts_router.get("/", response_model=list[schemas.PostResponse])
 async def get_posts(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -71,8 +68,8 @@ async def get_posts(
                 content=post.content,
                 user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
                 artist=schemas.ArtistResponse(
-                    id=post.artist.id, 
-                    name=post.artist.stage_name or post.artist.group_name
+                    id=post.artist.id,
+                    name=post.artist.stage_name or post.artist.group_name,
                 ),
                 likes_count=likes_count,
                 created_at=post.created_at,
@@ -86,7 +83,9 @@ async def get_posts(
 @posts_router.get("/{post_id}", response_model=schemas.PostDetailResponse)
 async def get_post(post_id: int):
     """포스트 상세 조회 (댓글 포함)"""
-    post = await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
+    post = (
+        await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
+    )
 
     if not post:
         raise HTTPException(
@@ -97,7 +96,11 @@ async def get_post(post_id: int):
     likes_count = await models.Like.filter(post=post).count()
 
     # 댓글 조회
-    comments = await models.Comment.filter(post=post).prefetch_related("user").order_by("created_at")
+    comments = (
+        await models.Comment.filter(post=post)
+        .prefetch_related("user")
+        .order_by("created_at")
+    )
     comment_responses = [
         schemas.CommentResponse(
             id=comment.id,
@@ -117,8 +120,7 @@ async def get_post(post_id: int):
         content=post.content,
         user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
         artist=schemas.ArtistResponse(
-            id=post.artist.id, 
-            name=post.artist.stage_name or post.artist.group_name
+            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
         ),
         likes_count=likes_count,
         created_at=post.created_at,
@@ -134,7 +136,9 @@ async def update_post(
     current_user: User = Depends(get_current_user),
 ):
     """포스트 수정"""
-    post = await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
+    post = (
+        await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
+    )
 
     if not post:
         raise HTTPException(
@@ -158,8 +162,7 @@ async def update_post(
         content=post.content,
         user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
         artist=schemas.ArtistResponse(
-            id=post.artist.id, 
-            name=post.artist.stage_name or post.artist.group_name
+            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
         ),
         likes_count=likes_count,
         created_at=post.created_at,
@@ -213,7 +216,7 @@ async def toggle_like(post_id: int, current_user: User = Depends(get_current_use
     return {"liked": liked, "likes_count": likes_count}
 
 
-@posts_router.get("/{post_id}/likes", response_model=List[schemas.LikeResponse])
+@posts_router.get("/{post_id}/likes", response_model=list[schemas.LikeResponse])
 async def get_post_likes(post_id: int):
     """포스트 좋아요 목록 조회"""
     post = await models.Post.get_or_none(id=post_id)
@@ -222,7 +225,11 @@ async def get_post_likes(post_id: int):
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
 
-    likes = await models.Like.filter(post=post).prefetch_related("user").order_by("-created_at")
+    likes = (
+        await models.Like.filter(post=post)
+        .prefetch_related("user")
+        .order_by("-created_at")
+    )
 
     return [
         schemas.LikeResponse(
@@ -259,16 +266,14 @@ async def create_comment(
     return schemas.CommentResponse(
         id=comment.id,
         content=comment.content,
-        user=schemas.UserResponse(
-            id=comment.user.id, nickname=comment.user.nickname
-        ),
+        user=schemas.UserResponse(id=comment.user.id, nickname=comment.user.nickname),
         post_id=comment.post_id,
         created_at=comment.created_at,
         updated_at=comment.updated_at,
     )
 
 
-@posts_router.get("/{post_id}/comments", response_model=List[schemas.CommentResponse])
+@posts_router.get("/{post_id}/comments", response_model=list[schemas.CommentResponse])
 async def get_comments(post_id: int):
     """포스트 댓글 목록 조회"""
     post = await models.Post.get_or_none(id=post_id)
@@ -277,7 +282,11 @@ async def get_comments(post_id: int):
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
 
-    comments = await models.Comment.filter(post=post).prefetch_related("user").order_by("created_at")
+    comments = (
+        await models.Comment.filter(post=post)
+        .prefetch_related("user")
+        .order_by("created_at")
+    )
 
     return [
         schemas.CommentResponse(
@@ -301,7 +310,9 @@ async def update_comment(
     current_user: User = Depends(get_current_user),
 ):
     """댓글 수정"""
-    comment = await models.Comment.filter(id=comment_id).prefetch_related("user").first()
+    comment = (
+        await models.Comment.filter(id=comment_id).prefetch_related("user").first()
+    )
 
     if not comment:
         raise HTTPException(
@@ -319,9 +330,7 @@ async def update_comment(
     return schemas.CommentResponse(
         id=comment.id,
         content=comment.content,
-        user=schemas.UserResponse(
-            id=comment.user.id, nickname=comment.user.nickname
-        ),
+        user=schemas.UserResponse(id=comment.user.id, nickname=comment.user.nickname),
         post_id=comment.post_id,
         created_at=comment.created_at,
         updated_at=comment.updated_at,
