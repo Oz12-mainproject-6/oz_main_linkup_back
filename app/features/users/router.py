@@ -66,7 +66,6 @@ async def signup(request: SignupRequest):
     user = await User.create(
         email=request.email,
         password=hashed_password,
-        password2=hashed_password,
         phone_number=request.phone_number,
         nickname=request.nickname,
         user_type=request.user_type,
