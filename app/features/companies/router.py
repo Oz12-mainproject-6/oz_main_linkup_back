@@ -293,6 +293,7 @@ async def get_company_artists(
             stage_name=artist.stage_name,
             group_name=artist.group_name,
             artist_type=artist.artist_type,
+            birth_date=artist.birthdate,
             debut_date=artist.debut_date,
             is_active=artist.is_active,
             event_count=0,  # 필요시 별도 계산
