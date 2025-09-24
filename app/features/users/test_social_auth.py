@@ -31,7 +31,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 
@@ -68,7 +68,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 
@@ -111,7 +111,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 
@@ -152,7 +152,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 
@@ -180,7 +180,7 @@ class TestSocialLogin:
     async def test_social_login_invalid_token(self, client, clean_users_db):
         """Test social login with invalid token."""
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = None  # 토큰 검증 실패
 
@@ -207,7 +207,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 
@@ -259,7 +259,7 @@ class TestSocialLogin:
         }
 
         with patch(
-            "app.features.users.router.get_oauth_user_info", new_callable=AsyncMock
+            "app.features.users.service.get_oauth_user_info", new_callable=AsyncMock
         ) as mock_oauth:
             mock_oauth.return_value = mock_user_info
 

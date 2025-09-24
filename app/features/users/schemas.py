@@ -17,10 +17,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class SocialLoginRequest(BaseModel):
-    provider: str  # "google" or "kakao"
-    access_token: str
-    user_type: UserType = UserType.FAN
+# class SocialLoginRequest(BaseModel):
+#     provider: str  # "google" or "kakao"
+#     access_token: str
+#     user_type: UserType = UserType.FAN
 
 
 class TokenResponse(BaseModel):
