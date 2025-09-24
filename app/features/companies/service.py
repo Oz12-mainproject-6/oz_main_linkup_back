@@ -437,3 +437,66 @@ class CompanyService:
         await artist.save()
 
         return {"message": "아티스트가 삭제되었습니다. (관련 이벤트도 함께 삭제됨)"}
+
+    @staticmethod
+    async def update_artist_with_images_form(
+        company: Company,
+        current_user: User,
+        artist_id: int,
+        stage_name: str | None = None,
+        group_name: str | None = None,
+        debut_date: date | None = None,
+        birthdate: date | None = None,
+        artist_type: ArtistType | None = None,
+        face_image_url: str | None = None,
+        torso_image_url: str | None = None,
+        banner_image_url: str | None = None,
+    ):
+        """아티스트 정보와 이미지 업데이트 (Form 방식, POST와 동일한 파라미터)"""
+        
+        # 아티스트 조회 및 권한 확인
+        artist = await Artist.get_or_none(id=artist_id, company=company)
+        if not artist:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="해당 아티스트를 찾을 수 없습니다.",
+            )
+
+        # 아티스트 정보 업데이트 (None이 아닌 값만)
+        if stage_name is not None:
+            artist.stage_name = stage_name
+        if group_name is not None:
+            artist.group_name = group_name
+        if debut_date is not None:
+            artist.debut_date = debut_date
+        if birthdate is not None:
+            artist.birthdate = birthdate
+        if artist_type is not None:
+            artist.artist_type = artist_type
+            
+        await artist.save()
+
+        # 이미지 업데이트 헬퍼 함수 (Form 방식)
+        async def update_image(image_type: ImageType, new_image_url: str | None):
+            if new_image_url is not None and new_image_url.strip():
+                # 기존 이미지 조회
+                existing_image = await SharedImage.filter(artist=artist, image_type=image_type).first()
+                
+                # 기존 URL과 다를 때만 업데이트
+                if not existing_image or existing_image.url != new_image_url:
+                    # 기존 이미지 삭제
+                    await SharedImage.filter(artist=artist, image_type=image_type).delete()
+                    
+                    # 새 이미지 생성
+                    await SharedImage.create(
+                        url=new_image_url,
+                        name=f"{artist.stage_name or artist.group_name}_{image_type.value}.jpg",
+                        image_type=image_type,
+                        uploaded_by=current_user,
+                        artist=artist,
+                    )
+
+        # 각 이미지 타입별 업데이트
+        await update_image(ImageType.FACE, face_image_url)
+        await update_image(ImageType.TORSO, torso_image_url)
+        await update_image(ImageType.BANNER, banner_image_url)
