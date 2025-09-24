@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -11,15 +11,16 @@ IS_DEVELOPMENT = ENVIRONMENT == "development"
 IS_PRODUCTION = ENVIRONMENT == "production"
 IS_DOCKER = os.getenv("DOCKER", "false").lower() == "true"
 
+
 # Database configuration based on environment
-def get_database_config() -> Dict[str, Any]:
+def get_database_config() -> dict[str, Any]:
     """환경에 따른 데이터베이스 설정 반환"""
-    
+
     # DATABASE_URL이 있다면 우선 사용 (프로덕션 배포용)
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         return database_url
-    
+
     # 개발 환경별 설정
     if IS_DOCKER:
         # Docker Compose 환경
@@ -61,11 +62,10 @@ def get_database_config() -> Dict[str, Any]:
             },
         }
 
+
 # Tortoise ORM 설정
 TORTOISE_ORM = {
-    "connections": {
-        "default": get_database_config()
-    },
+    "connections": {"default": get_database_config()},
     "apps": {
         "models": {
             "models": [

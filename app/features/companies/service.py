@@ -453,7 +453,7 @@ class CompanyService:
         banner_image_url: str | None = None,
     ):
         """아티스트 정보와 이미지 업데이트 (Form 방식, POST와 동일한 파라미터)"""
-        
+
         # 아티스트 조회 및 권한 확인
         artist = await Artist.get_or_none(id=artist_id, company=company)
         if not artist:
@@ -473,20 +473,24 @@ class CompanyService:
             artist.birthdate = birthdate
         if artist_type is not None:
             artist.artist_type = artist_type
-            
+
         await artist.save()
 
         # 이미지 업데이트 헬퍼 함수 (Form 방식)
         async def update_image(image_type: ImageType, new_image_url: str | None):
             if new_image_url is not None and new_image_url.strip():
                 # 기존 이미지 조회
-                existing_image = await SharedImage.filter(artist=artist, image_type=image_type).first()
-                
+                existing_image = await SharedImage.filter(
+                    artist=artist, image_type=image_type
+                ).first()
+
                 # 기존 URL과 다를 때만 업데이트
                 if not existing_image or existing_image.url != new_image_url:
                     # 기존 이미지 삭제
-                    await SharedImage.filter(artist=artist, image_type=image_type).delete()
-                    
+                    await SharedImage.filter(
+                        artist=artist, image_type=image_type
+                    ).delete()
+
                     # 새 이미지 생성
                     await SharedImage.create(
                         url=new_image_url,
