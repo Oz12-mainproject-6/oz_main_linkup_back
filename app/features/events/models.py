@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.features.artists.models import Artist
 
 
 class EventCategory(str, Enum):
@@ -33,7 +39,7 @@ class Events(TimestampMixin):
     """이벤트 모델"""
 
     id = fields.BigIntField(pk=True, description="이벤트 ID")
-    artist = fields.ForeignKeyField(
+    artist: fields.ForeignKeyRelation["Artist"] = fields.ForeignKeyField(
         "models.Artist",
         related_name="events",
         description="아티스트",

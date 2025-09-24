@@ -36,9 +36,9 @@ class CompanyService:
         )
 
         # 아티스트별 이번 년 이벤트 수 계산
-        artist_events_count = {}
+        artist_events_count: dict[int, int] = {}
         for event in recent_events:
-            artist_id = event.artist_id
+            artist_id = event.artist.id
             artist_events_count[artist_id] = artist_events_count.get(artist_id, 0) + 1
 
         # 응답 데이터 구성
@@ -212,7 +212,7 @@ class CompanyService:
         )
 
     @staticmethod
-    async def delete_event(company: Company, event_id: int) -> dict:
+    async def delete_event(company: Company, event_id: int) -> dict[str, str]:
         # 이벤트가 본인 소속사 것인지 확인
         event = await Events.filter(
             id=event_id, artist__company=company, is_active=True
@@ -305,11 +305,11 @@ class CompanyService:
         group_name: str | None = None,
         debut_date: date | None = None,
         birthdate: date | None = None,
-        artist_type: ArtistType = None,
+        artist_type: ArtistType | None = None,
         face_image: UploadFile | None = None,
         torso_image: UploadFile | None = None,
         banner_image: UploadFile | None = None,
-    ) -> dict:
+    ) -> dict[str, str | int | None]:
         # stage_name 또는 group_name 중 하나는 필수
         if not stage_name and not group_name:
             raise HTTPException(
@@ -394,7 +394,7 @@ class CompanyService:
     @staticmethod
     async def update_artist(
         company: Company, artist_id: int, request: ArtistUpdateRequest
-    ) -> dict:
+    ) -> dict[str, str]:
         artist = await Artist.get_or_none(id=artist_id, company=company)
         if not artist:
             raise HTTPException(
@@ -421,7 +421,7 @@ class CompanyService:
         return {"message": "아티스트 정보가 수정되었습니다."}
 
     @staticmethod
-    async def delete_artist(company: Company, artist_id: int) -> dict:
+    async def delete_artist(company: Company, artist_id: int) -> dict[str, str]:
         artist = await Artist.get_or_none(id=artist_id, company=company, is_active=True)
         if not artist:
             raise HTTPException(
