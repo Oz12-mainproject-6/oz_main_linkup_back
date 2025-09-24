@@ -9,6 +9,8 @@ from fastapi import HTTPException, UploadFile
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
+
+from app.external.scrapping import get_artist_schedule
 from app.features.events.schemas import FileUploadResponse
 from datetime import datetime, timedelta
 from tortoise.exceptions import DoesNotExist
@@ -760,3 +762,20 @@ class NotificationService:
 
 # 싱글톤 인스턴스 생성
 notification_service = NotificationService()
+
+
+
+# author : Juwon
+# date : 2025.09.23
+# content : notification.py를 services.py로 이동
+async def import_artist_events(artist_name: str, unit_id: str):
+    schedules = get_artist_schedule(artist_name, unit_id)
+    for s in schedules:
+        await Events.create(
+            title=s["title"],
+            date=s["date"],
+            category=["concert"],   # 필요시 매핑
+            visibility="public"
+        )
+    return schedules
+
