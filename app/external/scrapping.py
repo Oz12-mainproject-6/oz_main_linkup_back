@@ -211,34 +211,3 @@ def extract_type_info(element):
                 return keyword
 
     return None
-
-    return text[:50] if len(text) > 50 else text
-
-
-def extract_type_info(element):
-    """요소에서 타입 정보 추출"""
-    # 타입 관련 속성이나 클래스 찾기
-    type_attrs = ["data-type", "data-category", "data-kind"]
-    for attr in type_attrs:
-        if element.get(attr):
-            return element.get(attr)
-
-    # 클래스에서 타입 유추
-    classes = element.get("class", [])
-    type_keywords = [
-        "broadcast",
-        "방송",
-        "concert",
-        "콘서트",
-        "fanmeeting",
-        "팬미팅",
-        "release",
-        "발매",
-    ]
-
-    for cls in classes:
-        for keyword in type_keywords:
-            if keyword in cls.lower():
-                return keyword
-
-    return None
