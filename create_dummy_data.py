@@ -8,7 +8,7 @@ from app.features.artists.models import Artist, ArtistRole, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
 from app.features.posts.models import Comment, Like, Post
-from app.features.subscriptions.models import Subscription
+from app.features.notifications.models import Subscription
 from app.features.users.auth import get_password_hash
 from app.features.users.models import Company, User, UserType
 

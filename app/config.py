@@ -58,7 +58,6 @@ TORTOISE_ORM = {
                 "app.features.posts.models",
                 "app.features.images.models",
                 "app.features.notifications.models",
-                "app.features.subscriptions.models",
             ],
             "default_connection": "default",
         }

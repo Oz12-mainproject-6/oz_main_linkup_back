@@ -6,7 +6,7 @@ from app.features.images.models import ImageType, SharedImage
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
 
-from .models import Subscription
+from app.features.notifications.models import Subscription
 from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
