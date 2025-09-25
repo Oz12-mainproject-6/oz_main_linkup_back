@@ -769,7 +769,7 @@ notification_service = NotificationService()
 # date : 2025.09.23
 # content : notification.py를 services.py로 이동
 async def import_artist_events(artist_name: str, unit_id: str):
-    schedules = get_artist_schedule(artist_name, unit_id)
+    schedules = get_artist_schedule_by_name(artist_name, unit_id)
     for s in schedules:
         await Events.create(
             title=s["title"],
