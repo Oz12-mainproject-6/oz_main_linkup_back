@@ -5,9 +5,10 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
 
-from app.features.events.crud import EventCRUD
+from app.external.scrapping import get_artist_schedule
+from app.features.events.services import EventCRUD, notification_service
 from app.features.events.models import EventCategory, EventVisibility
-from app.features.events.notifications import notification_service
+
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
@@ -16,7 +17,7 @@ from app.features.events.schemas import (
 )
 from app.features.events.services import EventService
 
-event_router = APIRouter(prefix="/events", tags=["events"])
+event_router = APIRouter(prefix="/api/events", tags=["events"])
 
 
 @event_router.get("/", response_model=EventListResponse)
@@ -70,7 +71,7 @@ async def get_event(event_id: int):
     return event
 
 
-@event_router.post("/all", response_model=FileUploadResponse)
+@event_router.post("/", response_model=FileUploadResponse)
 async def bulk_create_events(
     bulk_data: BulkEventCreate, background_tasks: BackgroundTasks
 ):
@@ -230,3 +231,19 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
         raise HTTPException(
             status_code=400, detail=f"File processing error: {str(e)}"
         ) from e
+
+
+@event_router.get("/schedule/{artist_name}/{unit_id}")
+async def scrap_events(artist_name: str, unit_id: str):
+
+    try:
+        # 함수명 변경
+        events = get_artist_schedule(artist_name, unit_id)
+        return {"events": events}
+    except Exception as e:
+        # 더 자세한 에러 정보 반환
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
