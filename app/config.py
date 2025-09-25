@@ -34,8 +34,8 @@ def get_database_config() -> dict[str, Any]:
         },
     }
     
-    # 프로덕션 환경에서는 추가 설정
-    if IS_PRODUCTION:
+    # 프로덕션 환경에서는 추가 설정 (Docker 환경 제외)
+    if IS_PRODUCTION and db_host != "db":  # Docker 내부 db 호스트가 아닌 경우만
         config["credentials"].update({
             "ssl": "require",
             "maxsize": int(os.getenv("DB_POOL_SIZE", "20")),
