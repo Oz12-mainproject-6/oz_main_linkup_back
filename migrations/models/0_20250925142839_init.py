@@ -32,9 +32,10 @@ CREATE TABLE IF NOT EXISTS "user" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "email" VARCHAR(200) NOT NULL UNIQUE,
     "password" VARCHAR(200) NOT NULL,
-    "phone_number" VARCHAR(20),
     "nickname" VARCHAR(50),
-    "user_type" VARCHAR(9) NOT NULL DEFAULT 'fan',
+    "profile_image_url" VARCHAR(500),
+    "user_type" VARCHAR(7) NOT NULL DEFAULT 'fan',
+    "original_user_type" VARCHAR(7),
     "push_notification_enabled" BOOL NOT NULL DEFAULT True,
     "in_app_notification_enabled" BOOL NOT NULL DEFAULT True,
     "oauth_provider" VARCHAR(50),
@@ -49,9 +50,10 @@ COMMENT ON COLUMN "user"."updated_at" IS '수정일시';
 COMMENT ON COLUMN "user"."id" IS '사용자 ID';
 COMMENT ON COLUMN "user"."email" IS '이메일';
 COMMENT ON COLUMN "user"."password" IS '비밀번호';
-COMMENT ON COLUMN "user"."phone_number" IS '전화번호';
 COMMENT ON COLUMN "user"."nickname" IS '별명';
+COMMENT ON COLUMN "user"."profile_image_url" IS '프로필 이미지 URL';
 COMMENT ON COLUMN "user"."user_type" IS '사용자 타입';
+COMMENT ON COLUMN "user"."original_user_type" IS '차단 전 원래 사용자 타입';
 COMMENT ON COLUMN "user"."push_notification_enabled" IS '푸시 알림 활성화';
 COMMENT ON COLUMN "user"."in_app_notification_enabled" IS '앱 내 알림 활성화';
 COMMENT ON COLUMN "user"."oauth_provider" IS '소셜 로그인 제공자';
@@ -206,11 +208,12 @@ CREATE TABLE IF NOT EXISTS "shared_image" (
     "size" BIGINT,
     "content_type" VARCHAR(100),
     "image_type" VARCHAR(5) NOT NULL,
-    "is_public" BOOL NOT NULL DEFAULT True,
     "artist_id" BIGINT REFERENCES "artist" ("id") ON DELETE CASCADE,
     "event_id" BIGINT REFERENCES "events" ("id") ON DELETE CASCADE,
     "uploaded_by_id" BIGINT NOT NULL REFERENCES "user" ("id") ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS "idx_shared_imag_image_t_a130ec" ON "shared_image" ("image_type");
+CREATE INDEX IF NOT EXISTS "idx_shared_imag_artist__54b631" ON "shared_image" ("artist_id", "image_type");
 COMMENT ON COLUMN "shared_image"."created_at" IS '생성일시';
 COMMENT ON COLUMN "shared_image"."updated_at" IS '수정일시';
 COMMENT ON COLUMN "shared_image"."id" IS '이미지 ID';
@@ -219,7 +222,6 @@ COMMENT ON COLUMN "shared_image"."name" IS '원본 파일명';
 COMMENT ON COLUMN "shared_image"."size" IS '파일 크기 (bytes)';
 COMMENT ON COLUMN "shared_image"."content_type" IS 'MIME 타입';
 COMMENT ON COLUMN "shared_image"."image_type" IS '이미지 타입';
-COMMENT ON COLUMN "shared_image"."is_public" IS '구독자가 사용 가능한지';
 COMMENT ON COLUMN "shared_image"."artist_id" IS '관련 아티스트';
 COMMENT ON COLUMN "shared_image"."event_id" IS '관련 이벤트';
 COMMENT ON COLUMN "shared_image"."uploaded_by_id" IS '업로드한 사용자 (소속사)';

@@ -6,7 +6,7 @@ from app.features.images.models import ImageType, SharedImage
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
 
-from .models import Subscription
+from app.features.notifications.models import Subscription
 from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -23,14 +23,22 @@ async def create_subscription(
     if not artist:
         raise HTTPException(status_code=404, detail="아티스트를 찾을 수 없습니다.")
 
-    # 이미 구독 여부 확인
-    exists = await Subscription.filter(
-        user=current_user, artist=artist, is_active=True
-    ).exists()
-    if exists:
-        raise HTTPException(status_code=400, detail="이미 구독 중입니다.")
-
-    await Subscription.create(user=current_user, artist=artist)
+    # 기존 구독 확인 (활성/비활성 모두)
+    existing_subscription = await Subscription.filter(
+        user=current_user, artist=artist
+    ).first()
+    
+    if existing_subscription:
+        if existing_subscription.is_active:
+            raise HTTPException(status_code=400, detail="이미 구독 중입니다.")
+        else:
+            # 비활성화된 구독이 있으면 다시 활성화
+            existing_subscription.is_active = True
+            await existing_subscription.save()
+            return {"detail": "구독이 재활성화되었습니다."}
+    else:
+        # 새로운 구독 생성
+        await Subscription.create(user=current_user, artist=artist)
     return {"detail": "구독이 완료되었습니다."}
 
 

@@ -8,7 +8,7 @@ from app.features.artists.models import Artist, ArtistRole, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
 from app.features.posts.models import Comment, Like, Post
-from app.features.subscriptions.models import Subscription
+from app.features.notifications.models import Subscription
 from app.features.users.auth import get_password_hash
 from app.features.users.models import Company, User, UserType
 
@@ -16,7 +16,10 @@ from app.features.users.models import Company, User, UserType
 async def create_dummy_data():
     """완전한 더미 데이터 생성 스크립트"""
     try:
+        print("🔗 데이터베이스 연결 중...")
         await Tortoise.init(config=TORTOISE_ORM)
+        await Tortoise.generate_schemas()
+        print("✅ 데이터베이스 연결 성공!")
         print("🎭 더미 데이터 생성 시작...")
 
         # 기존 더미 데이터 완전 삭제 (순서 중요)

@@ -18,7 +18,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # 의존성 설치
-RUN uv sync --no-dev
+RUN uv sync
 
 # 애플리케이션 코드 복사
 COPY . .
