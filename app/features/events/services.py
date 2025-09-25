@@ -1,21 +1,20 @@
+import asyncio
+import io
+from datetime import datetime, timedelta
+from typing import Any, BinaryIO
+
 import httpx
 import pandas as pd
-import io
-import asyncio
-
-from typing import BinaryIO
-from typing import Any
 from fastapi import HTTPException, UploadFile
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
-
-from app.external.scrapping import get_artist_schedule
-from app.features.events.schemas import FileUploadResponse
-from datetime import datetime, timedelta
 from tortoise.exceptions import DoesNotExist
+
 from app.features.artists.models import Artist
 from app.features.events.models import EventCategory, Events, EventVisibility
+from app.features.events.schemas import FileUploadResponse
+
 
 # author : Juwon
 # date : 2025.09.22
@@ -152,9 +151,11 @@ class EventCRUD:
         except DoesNotExist:
             return False
 
+
 # author : Juwon
 # date : 2025.09.22
 # content : 기존의 services.py 부분
+
 
 class EventService:
     """이벤트 비즈니스 로직 서비스"""
@@ -475,11 +476,10 @@ class EventService:
         # 카테고리별 통계 (추후 구현 예정)
         return {"total_events": len(total_events)}
 
+
 # author : Juwon
 # date : 2025.09.22
 # content : notification.py를 services.py로 이동
-
-
 
 
 class NotificationService:
@@ -764,7 +764,6 @@ class NotificationService:
 notification_service = NotificationService()
 
 
-
 # author : Juwon
 # date : 2025.09.23
 # content : notification.py를 services.py로 이동
@@ -774,8 +773,7 @@ async def import_artist_events(artist_name: str, unit_id: str):
         await Events.create(
             title=s["title"],
             date=s["date"],
-            category=["concert"],   # 필요시 매핑
-            visibility="public"
+            category=["concert"],  # 필요시 매핑
+            visibility="public",
         )
     return schedules
-

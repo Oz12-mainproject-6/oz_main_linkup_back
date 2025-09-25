@@ -99,6 +99,7 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
     "UP034", # avoid extraneous parentheses(Tortoise ORM 과 충돌)
+    "UP037", # remove quotes from type annotation(Tortoise ORM ForeignKeyRelation과 충돌)
 ]
 
 [tool.ruff.format]
