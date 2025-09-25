@@ -17,8 +17,18 @@ WORKDIR /app
 # Python 의존성 파일들 복사
 COPY pyproject.toml uv.lock ./
 
+<<<<<<< HEAD
 # 의존성 설치
 RUN uv sync
+=======
+# 의존성 설치 (개발 환경도 고려)
+ARG ENVIRONMENT=development
+RUN if [ "$ENVIRONMENT" = "production" ]; then \
+        uv sync --no-dev; \
+    else \
+        uv sync; \
+    fi
+>>>>>>> 76c602be6010bc6376509fef288ae9b4a2bfa825
 
 # 애플리케이션 코드 복사
 COPY . .
