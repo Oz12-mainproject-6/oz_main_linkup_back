@@ -16,7 +16,10 @@ from app.features.users.models import Company, User, UserType
 async def create_dummy_data():
     """완전한 더미 데이터 생성 스크립트"""
     try:
+        print("🔗 데이터베이스 연결 중...")
         await Tortoise.init(config=TORTOISE_ORM)
+        await Tortoise.generate_schemas()
+        print("✅ 데이터베이스 연결 성공!")
         print("🎭 더미 데이터 생성 시작...")
 
         # 기존 더미 데이터 완전 삭제 (순서 중요)
