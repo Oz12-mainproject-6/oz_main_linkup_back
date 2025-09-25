@@ -8,7 +8,8 @@ class SubscriptionCreate(BaseModel):
 class SubscriptionOut(BaseModel):
     id: int
     artist_id: int
-    artist_name: str | None = None
+    group_name: str | None = None
+    stage_name: str | None = None
     is_active: bool
 
     class Config:
@@ -18,7 +19,8 @@ class SubscriptionOut(BaseModel):
 class SubscriptionWithImageOut(BaseModel):
     id: int
     artist_id: int
-    artist_name: str | None = None
+    group_name: str | None = None
+    stage_name: str | None = None
     artist_image_url: str | None = None
     is_active: bool
 

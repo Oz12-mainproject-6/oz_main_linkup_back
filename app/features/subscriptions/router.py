@@ -65,17 +65,12 @@ async def list_subscriptions(
                 artist=sub.artist, image_type=ImageType.FACE
             ).first()
 
-            artist_name = (
-                sub.artist.group_name
-                if sub.artist.artist_type == ArtistType.GROUP
-                else sub.artist.stage_name
-            )
-
             result.append(
                 SubscriptionWithImageOut(
                     id=sub.id,
                     artist_id=sub.artist.id,
-                    artist_name=artist_name,
+                    group_name=sub.artist.group_name,
+                    stage_name=sub.artist.stage_name if sub.artist.artist_type != ArtistType.GROUP else None,
                     artist_image_url=face_image.url if face_image else None,
                     is_active=sub.is_active,
                 )
@@ -87,16 +82,12 @@ async def list_subscriptions(
         subscriptions = await query.prefetch_related("artist")
         result = []
         for sub in subscriptions:
-            artist_name = (
-                sub.artist.group_name
-                if sub.artist.artist_type == ArtistType.GROUP
-                else sub.artist.stage_name
-            )
             result.append(
                 SubscriptionOut(
                     id=sub.id,
                     artist_id=sub.artist.id,
-                    artist_name=artist_name,
+                    group_name=sub.artist.group_name,
+                    stage_name=sub.artist.stage_name if sub.artist.artist_type != ArtistType.GROUP else None,
                     is_active=sub.is_active,
                 )
             )
