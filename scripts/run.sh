@@ -62,6 +62,12 @@ fi
 
 echo "✅ Database setup complete!"
 
+# 더미 데이터 생성 (개발 환경에서만, 환경변수로 제어)
+if [ "$ENVIRONMENT" = "development" ] && [ "$CREATE_DUMMY_DATA" = "true" ]; then
+    echo "🎭 Creating dummy data..."
+    uv run python create_dummy_data_fixed.py || echo "⚠️ Dummy data creation failed, continuing..."
+fi
+
 # FastAPI 앱 실행
 echo "🌟 Starting FastAPI application..."
 if [ "$ENVIRONMENT" = "production" ]; then
