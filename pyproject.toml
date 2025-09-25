@@ -98,6 +98,7 @@ ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "UP034", # avoid extraneous parentheses(Tortoise ORM 과 충돌)
 ]
 
 [tool.ruff.format]
