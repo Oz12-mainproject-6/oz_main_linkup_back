@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr
 
 from app.features.users.models import UserType
@@ -6,7 +8,6 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
     verification_code: str  # 이메일 인증 코드 필수
@@ -51,20 +52,45 @@ class UserResponse(BaseModel):
     is_email_verified: bool = False
 
 
+class UserPostResponse(BaseModel):
+    """내 포스트 정보"""
+
+    id: int
+    content: str
+    artist_id: int
+    artist_name: str | None
+    likes_count: int
+    comments_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class UserMeResponse(BaseModel):
     id: int
     email: EmailStr | None
     nickname: str | None
-    phone_number: str | None
+    profile_image_url: str | None
     user_type: UserType
 
     class Config:
         from_attributes = True
 
 
-class UserMeUpdateRequest(BaseModel):
-    nickname: str | None = None
-    phone_number: str | None = None
+class UserMeWithPostsResponse(BaseModel):
+    """포스트 포함한 내 프로필 응답"""
+
+    id: int
+    email: EmailStr | None
+    nickname: str | None
+    profile_image_url: str | None
+    user_type: UserType
+    posts: list[UserPostResponse] = []
+
+    class Config:
+        from_attributes = True
 
 
 class PasswordChangeRequest(BaseModel):

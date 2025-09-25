@@ -71,3 +71,4 @@ class S3Folders:
     TORSO = "torso"
     BANNER = "banner"
     POST = "post"
+    PROFILE = "profiles"

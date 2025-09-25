@@ -21,7 +21,6 @@ from app.features.users.schemas import (
     SendVerificationEmailRequest,
     SignupRequest,
     TokenResponse,
-    UserMeUpdateRequest,
     UserResponse,
     VerifyEmailRequest,
 )
@@ -68,7 +67,6 @@ class UserService:
         user = await User.create(
             email=request.email,
             password=hashed_password,
-            phone_number=request.phone_number,
             nickname=request.nickname,
             user_type=request.user_type,
             is_email_verified=True,  # 회원가입 시 이메일 인증 완료
@@ -416,17 +414,6 @@ class UserService:
 
             token_data = token_response.json()
             return token_data["access_token"]
-
-    @staticmethod
-    async def update_profile(user: User, request: UserMeUpdateRequest) -> User:
-        """프로필 업데이트"""
-        if request.nickname is not None:
-            user.nickname = request.nickname
-        if request.phone_number is not None:
-            user.phone_number = request.phone_number
-
-        await user.save()
-        return user
 
     @staticmethod
     async def change_password(user: User, request: PasswordChangeRequest) -> dict:
