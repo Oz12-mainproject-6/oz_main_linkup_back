@@ -64,6 +64,7 @@ class Subscription(TimestampMixin):
         related_name="subscribers",
         description="아티스트",
     )
+    is_active = fields.BooleanField(default=True, description="구독 상태")
 
     class Meta:
         table = "subscription"
