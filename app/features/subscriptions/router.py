@@ -44,10 +44,10 @@ async def list_subscriptions(
     current_user: User = Depends(get_current_fan_user),
 ):
     """내 구독 목록 조회"""
-    
+
     # 기본 쿼리
     query = Subscription.filter(user=current_user, is_active=True)
-    
+
     # 아티스트 이름 필터링
     if group_name:
         query = query.filter(artist__group_name__icontains=group_name)
@@ -70,7 +70,9 @@ async def list_subscriptions(
                     id=sub.id,
                     artist_id=sub.artist.id,
                     group_name=sub.artist.group_name,
-                    stage_name=sub.artist.stage_name if sub.artist.artist_type != ArtistType.GROUP else None,
+                    stage_name=sub.artist.stage_name
+                    if sub.artist.artist_type != ArtistType.GROUP
+                    else None,
                     artist_image_url=face_image.url if face_image else None,
                     is_active=sub.is_active,
                 )
@@ -87,7 +89,9 @@ async def list_subscriptions(
                     id=sub.id,
                     artist_id=sub.artist.id,
                     group_name=sub.artist.group_name,
-                    stage_name=sub.artist.stage_name if sub.artist.artist_type != ArtistType.GROUP else None,
+                    stage_name=sub.artist.stage_name
+                    if sub.artist.artist_type != ArtistType.GROUP
+                    else None,
                     is_active=sub.is_active,
                 )
             )
