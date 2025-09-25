@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import RedirectResponse
 
+from app.core.s3 import S3Folders, s3_handler
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
 from app.features.users.schemas import (
@@ -11,7 +12,8 @@ from app.features.users.schemas import (
     SignupRequest,
     TokenResponse,
     UserMeResponse,
-    UserMeUpdateRequest,
+    UserMeWithPostsResponse,
+    UserPostResponse,
     UserResponse,
     VerifyEmailRequest,
 )
@@ -83,19 +85,121 @@ async def logout():
     return {"message": "로그아웃되었습니다."}
 
 
-@auth_router.get("/me", response_model=UserMeResponse)
-async def get_my_profile(current_user: User = Depends(get_current_user)):
-    """내 프로필 조회"""
-    return current_user
+@auth_router.get("/me", response_model=UserMeWithPostsResponse)
+async def get_my_profile(
+    include_posts: bool = Query(True, description="포스트 정보 포함 여부"),
+    sort_by: str = Query(
+        "latest", description="정렬 기준: latest(최신순), popular(좋아요순)"
+    ),
+    limit: int = Query(20, ge=1, le=100, description="포스트 조회 개수"),
+    current_user: User = Depends(get_current_user),
+):
+    """내 프로필 조회 (포스트 포함)"""
+
+    # 기본 프로필 정보
+    profile_data = {
+        "id": current_user.id,
+        "email": current_user.email,
+        "nickname": current_user.nickname,
+        "profile_image_url": current_user.profile_image_url,
+        "user_type": current_user.user_type,
+        "posts": [],
+    }
+
+    if not include_posts:
+        return profile_data
+
+    # 포스트 모델 import
+    from app.features.artists.models import ArtistType
+    from app.features.posts.models import Comment, Like, Post
+
+    # 포스트 쿼리 구성
+    posts_query = Post.filter(user=current_user).prefetch_related("artist")
+
+    # 정렬 적용
+    if sort_by == "popular":
+        # 좋아요 수가 많은 순으로 정렬하려면 annotate가 필요하지만,
+        # 현재는 간단하게 created_at 역순으로 하고 나중에 좋아요 수로 정렬
+        posts = await posts_query.order_by("-created_at").limit(limit)
+    else:  # latest
+        posts = await posts_query.order_by("-created_at").limit(limit)
+
+    # 각 포스트의 좋아요/댓글 수 계산
+    post_responses = []
+    for post in posts:
+        likes_count = await Like.filter(post=post).count()
+        comments_count = await Comment.filter(post=post).count()
+
+        # 아티스트 이름 결정
+        artist_name = None
+        if post.artist:
+            if post.artist.artist_type == ArtistType.GROUP:
+                artist_name = post.artist.group_name
+            else:
+                artist_name = post.artist.stage_name
+
+        post_responses.append(
+            UserPostResponse(
+                id=post.id,
+                content=post.content,
+                artist_id=post.artist.id,
+                artist_name=artist_name,
+                likes_count=likes_count,
+                comments_count=comments_count,
+                created_at=post.created_at,
+                updated_at=post.updated_at,
+            )
+        )
+
+    # 좋아요 수로 정렬이 요청된 경우 Python에서 정렬
+    if sort_by == "popular":
+        post_responses.sort(key=lambda x: x.likes_count, reverse=True)
+
+    profile_data["posts"] = post_responses
+    return profile_data
 
 
 @auth_router.put("/me", response_model=UserMeResponse)
 async def update_my_profile(
-    request: UserMeUpdateRequest,
+    nickname: str | None = None,
+    profile_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
 ):
-    """내 프로필 수정"""
-    return await UserService.update_profile(current_user, request)
+    """내 프로필 수정 (닉네임, 프로필 이미지)"""
+
+    # 프로필 이미지 업로드 처리
+    if profile_image:
+        # 이미지 파일 유효성 검사
+        if not profile_image.content_type or not profile_image.content_type.startswith(
+            "image/"
+        ):
+            raise HTTPException(
+                status_code=400, detail="이미지 파일만 업로드 가능합니다."
+            )
+
+        # 파일 크기 제한 (5MB)
+        if profile_image.size and profile_image.size > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400, detail="파일 크기는 5MB 이하로 제한됩니다."
+            )
+
+        # 기존 이미지 삭제 (있다면)
+        if current_user.profile_image_url:
+            s3_handler.delete_file(current_user.profile_image_url)
+
+        # 새 이미지 업로드
+        image_url = await s3_handler.upload_file(profile_image, S3Folders.PROFILE)
+        if not image_url:
+            raise HTTPException(status_code=500, detail="이미지 업로드에 실패했습니다.")
+
+        current_user.profile_image_url = image_url
+
+    # 닉네임 업데이트
+    if nickname is not None:
+        current_user.nickname = nickname
+
+    await current_user.save()
+    return current_user
 
 
 @auth_router.put("/me/password")

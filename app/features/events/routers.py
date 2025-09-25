@@ -6,16 +6,14 @@ from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app.external.scrapping import get_artist_schedule
-from app.features.events.services import EventCRUD, notification_service
 from app.features.events.models import EventCategory, EventVisibility
-
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
     EventResponse,
     FileUploadResponse,
 )
-from app.features.events.services import EventService
+from app.features.events.services import EventCRUD, EventService, notification_service
 
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -235,7 +233,6 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
 
 @event_router.get("/schedule/{artist_name}/{unit_id}")
 async def scrap_events(artist_name: str, unit_id: str):
-
     try:
         # 함수명 변경
         events = get_artist_schedule(artist_name, unit_id)
@@ -243,7 +240,5 @@ async def scrap_events(artist_name: str, unit_id: str):
     except Exception as e:
         # 더 자세한 에러 정보 반환
         import traceback
-        return {
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
+
+        return {"error": str(e), "traceback": traceback.format_exc()}
