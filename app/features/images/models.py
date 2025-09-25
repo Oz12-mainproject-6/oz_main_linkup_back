@@ -63,6 +63,10 @@ class SharedImage(TimestampMixin):
 
     class Meta:
         table = "shared_image"
+        indexes = [
+            ("image_type",),  # image_type 단일 컬럼 인덱스
+            ("artist", "image_type"),  # artist + image_type 복합 인덱스 (자주 함께 쿼리됨)
+        ]
 
 
 class ImageUsage(TimestampMixin):
