@@ -12,7 +12,6 @@ from fastapi import (
 from app.features.artists.models import ArtistType
 from app.features.companies.dependencies import get_current_company_user
 from app.features.companies.schemas import (
-    ArtistUpdateRequest,
     CompanyDashboardResponse,
     DashboardArtistInfo,
     EventCreateRequest,
@@ -99,55 +98,7 @@ async def get_artist_detail(
     current_user, company = user_company
     return await CompanyService.get_artist_detail(company, artist_id)
 
-
-# @companies_router.post("/artists")
-# async def create_artist(
-#     request: ArtistCreateRequest,
-#     user_company: tuple[User, Company] = Depends(get_current_company_user),
-# ):
-#     """아티스트 생성 (이미지 없음) - DEPRECATED: /artists/with-images 사용 권장"""
-#     current_user, company = user_company
-
-#     # 이메일 중복 체크
-#     existing_artist = await Artist.filter(email=request.email).first()
-#     if existing_artist:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST, detail="이미 등록된 이메일입니다."
-#         )
-
-#     # parent_group 확인 (멤버인 경우)
-#     parent_group = None
-#     if request.parent_group_id:
-#         parent_group = await Artist.get_or_none(
-#             id=request.parent_group_id, company=company, artist_type="group"
-#         )
-#         if not parent_group:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="해당 그룹을 찾을 수 없습니다.",
-#             )
-
-#     artist = await Artist.create(
-#         company=company,
-#         stage_name=request.stage_name,
-#         group_name=request.group_name,
-#         birthdate=request.birthdate,
-#         gender=request.gender,
-#         role=request.role,
-#         mbti=request.mbti,
-#         height=request.height,
-#         nickname=request.nickname,
-#         email=request.email,
-#         debut_date=request.debut_date,
-#         artist_type=request.artist_type,
-#         parent_group=parent_group,
-#         member_count=request.member_count,
-#     )
-
-#     return {"message": "아티스트가 생성되었습니다.", "artist_id": artist.id}
-
-
-@companies_router.post("/artists/with-images")
+@companies_router.post("/artists")
 async def create_artist_with_images(
     stage_name: str = Form(None),
     group_name: str = Form(None),
@@ -175,15 +126,46 @@ async def create_artist_with_images(
     )
 
 
+# @companies_router.put("/artists/{artist_id}")
+# async def update_artist(
+#     artist_id: int,
+#     request: ArtistUpdateRequest,
+#     user_company: tuple[User, Company] = Depends(get_current_company_user),
+# ):
+#     """아티스트 수정"""
+#     current_user, company = user_company
+#     return await CompanyService.update_artist(company, artist_id, request)
+
+
 @companies_router.put("/artists/{artist_id}")
-async def update_artist(
+async def update_artist_with_images(
     artist_id: int,
-    request: ArtistUpdateRequest,
+    stage_name: str = Form(None),
+    group_name: str = Form(None),
+    debut_date: date = Form(None),
+    birthdate: date = Form(None),
+    artist_type: ArtistType = Form(None),
+    face_image_url: str = Form(None),
+    torso_image_url: str = Form(None),
+    banner_image_url: str = Form(None),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
-    """아티스트 수정"""
+    """아티스트 정보와 이미지 업데이트 (POST와 동일한 Form 방식)"""
     current_user, company = user_company
-    return await CompanyService.update_artist(company, artist_id, request)
+    await CompanyService.update_artist_with_images_form(
+        company,
+        current_user,
+        artist_id,
+        stage_name,
+        group_name,
+        debut_date,
+        birthdate,
+        artist_type,
+        face_image_url,
+        torso_image_url,
+        banner_image_url,
+    )
+    return {"message": "아티스트 정보가 성공적으로 업데이트되었습니다.", "artist_id": artist_id}
 
 
 @companies_router.delete("/artists/{artist_id}")
