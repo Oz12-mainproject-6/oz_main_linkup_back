@@ -98,6 +98,7 @@ async def get_artist_detail(
     current_user, company = user_company
     return await CompanyService.get_artist_detail(company, artist_id)
 
+
 @companies_router.post("/artists")
 async def create_artist_with_images(
     stage_name: str = Form(None),
@@ -165,7 +166,10 @@ async def update_artist_with_images(
         torso_image_url,
         banner_image_url,
     )
-    return {"message": "아티스트 정보가 성공적으로 업데이트되었습니다.", "artist_id": artist_id}
+    return {
+        "message": "아티스트 정보가 성공적으로 업데이트되었습니다.",
+        "artist_id": artist_id,
+    }
 
 
 @companies_router.delete("/artists/{artist_id}")
