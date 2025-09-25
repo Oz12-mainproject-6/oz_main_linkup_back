@@ -7,7 +7,7 @@ from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
 
 from .models import Subscription
-from .schemas import SubscriptionCreate, SubscriptionWithImageOut
+from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
@@ -39,15 +39,24 @@ async def list_subscriptions(
     include_image: bool = Query(
         False, description="아티스트 face 이미지 URL 포함 여부"
     ),
+    group_name: str | None = Query(None, description="그룹명으로 필터링"),
+    stage_name: str | None = Query(None, description="활동명으로 필터링"),
     current_user: User = Depends(get_current_fan_user),
 ):
     """내 구독 목록 조회"""
+    
+    # 기본 쿼리
+    query = Subscription.filter(user=current_user, is_active=True)
+    
+    # 아티스트 이름 필터링
+    if group_name:
+        query = query.filter(artist__group_name__icontains=group_name)
+    if stage_name:
+        query = query.filter(artist__stage_name__icontains=stage_name)
 
     if include_image:
         # face 이미지 URL 포함한 응답
-        subscriptions = await Subscription.filter(
-            user=current_user, is_active=True
-        ).prefetch_related("artist")
+        subscriptions = await query.prefetch_related("artist")
 
         result = []
         for sub in subscriptions:
@@ -75,13 +84,23 @@ async def list_subscriptions(
         return result
     else:
         # 기본 응답 (이미지 없음)
-        subscriptions = await Subscription.filter(
-            user=current_user, is_active=True
-        ).prefetch_related("artist")
-        return [
-            SubscriptionOut(id=sub.id, artist_id=sub.artist.id, is_active=sub.is_active)
-            for sub in subscriptions
-        ]
+        subscriptions = await query.prefetch_related("artist")
+        result = []
+        for sub in subscriptions:
+            artist_name = (
+                sub.artist.group_name
+                if sub.artist.artist_type == ArtistType.GROUP
+                else sub.artist.stage_name
+            )
+            result.append(
+                SubscriptionOut(
+                    id=sub.id,
+                    artist_id=sub.artist.id,
+                    artist_name=artist_name,
+                    is_active=sub.is_active,
+                )
+            )
+        return result
 
 
 @subscriptions_router.delete("/{subscription_id}", response_model=dict)
