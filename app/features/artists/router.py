@@ -55,7 +55,7 @@ async def get_idol_list(
 
         # FACE 타입 이미지를 우선 조회, 없으면 TORSO 타입 조회
         face_image = await SharedImage.filter(
-            artist=artist, image_type=ImageType.FACE, is_public=True
+            artist=artist, image_type=ImageType.FACE
         ).first()
 
         if face_image:
@@ -63,7 +63,7 @@ async def get_idol_list(
         else:
             # FACE가 없으면 TORSO 이미지 조회
             torso_image = await SharedImage.filter(
-                artist=artist, image_type=ImageType.TORSO, is_public=True
+                artist=artist, image_type=ImageType.TORSO
             ).first()
             if torso_image:
                 profile_image_url = torso_image.url
@@ -110,7 +110,7 @@ async def get_idol_detail(artist_name: str):
     # 프로필 이미지 조회 (FACE 타입 우선)
     profile_image_url = None
     face_image = await SharedImage.filter(
-        artist=artist, image_type=ImageType.FACE, is_public=True
+        artist=artist, image_type=ImageType.FACE
     ).first()
 
     if face_image:
@@ -118,7 +118,7 @@ async def get_idol_detail(artist_name: str):
     else:
         # FACE가 없으면 TORSO 이미지 조회
         torso_image = await SharedImage.filter(
-            artist=artist, image_type=ImageType.TORSO, is_public=True
+            artist=artist, image_type=ImageType.TORSO
         ).first()
         if torso_image:
             profile_image_url = torso_image.url

@@ -63,3 +63,11 @@ class S3Handler:
 
 
 s3_handler = S3Handler()
+
+
+# 이미지 타입별 폴더 상수
+class S3Folders:
+    FACE = "face"
+    TORSO = "torso"
+    BANNER = "banner"
+    POST = "post"

@@ -1,5 +1,3 @@
-"""Shared fixtures for users feature tests."""
-
 import pytest
 from tortoise import Tortoise
 

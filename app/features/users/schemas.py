@@ -6,7 +6,6 @@ from app.features.users.models import UserType
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    password2: str
     phone_number: str | None = None
     nickname: str | None = None
     user_type: UserType = UserType.FAN
@@ -18,10 +17,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class SocialLoginRequest(BaseModel):
-    provider: str  # "google" or "kakao"
-    access_token: str
-    user_type: UserType = UserType.FAN
+# class SocialLoginRequest(BaseModel):
+#     provider: str  # "google" or "kakao"
+#     access_token: str
+#     user_type: UserType = UserType.FAN
 
 
 class TokenResponse(BaseModel):
@@ -60,9 +59,15 @@ class UserMeResponse(BaseModel):
     user_type: UserType
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserMeUpdateRequest(BaseModel):
     nickname: str | None = None
     phone_number: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str

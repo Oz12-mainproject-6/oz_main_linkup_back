@@ -1,8 +1,17 @@
+from __future__ import annotations
+
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.features.artists.models import Artist
+    from app.features.events.models import Events
+    from app.features.posts.models import Post
+    from app.features.users.models import User
 
 
 class ImageType(str, Enum):
@@ -26,20 +35,20 @@ class SharedImage(TimestampMixin):
     content_type = fields.CharField(max_length=100, null=True, description="MIME 타입")
 
     # 업로더 정보
-    uploaded_by = fields.ForeignKeyField(
+    uploaded_by: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
         "models.User",
         related_name="uploaded_images",
         description="업로드한 사용자 (소속사)",
     )
 
     # 연관 엔티티 (어떤 아티스트/이벤트와 관련된 이미지인지)
-    artist = fields.ForeignKeyField(
+    artist: fields.ForeignKeyRelation["Artist"] = fields.ForeignKeyField(
         "models.Artist",
         related_name="shared_images",
         null=True,
         description="관련 아티스트",
     )
-    event = fields.ForeignKeyField(
+    event: fields.ForeignKeyRelation["Events"] = fields.ForeignKeyField(
         "models.Events",
         related_name="shared_images",
         null=True,
@@ -52,11 +61,12 @@ class SharedImage(TimestampMixin):
         description="이미지 타입",
     )
 
-    # 공개 설정
-    is_public = fields.BooleanField(default=True, description="구독자가 사용 가능한지")
-
     class Meta:
         table = "shared_image"
+        indexes = [
+            ("image_type",),  # image_type 단일 컬럼 인덱스
+            ("artist", "image_type"),  # artist + image_type 복합 인덱스 (자주 함께 쿼리됨)
+        ]
 
 
 class ImageUsage(TimestampMixin):
@@ -64,14 +74,14 @@ class ImageUsage(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="사용 기록 ID")
 
-    shared_image = fields.ForeignKeyField(
+    shared_image: fields.ForeignKeyRelation["SharedImage"] = fields.ForeignKeyField(
         "models.SharedImage",
         related_name="usage_records",
         description="사용된 이미지",
     )
 
     # 사용한 곳
-    post = fields.ForeignKeyField(
+    post: fields.ForeignKeyRelation["Post"] = fields.ForeignKeyField(
         "models.Post",
         related_name="used_images",
         null=True,
@@ -79,7 +89,7 @@ class ImageUsage(TimestampMixin):
     )
 
     # 사용자
-    used_by = fields.ForeignKeyField(
+    used_by: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
         "models.User",
         related_name="image_usages",
         description="사용한 사용자",

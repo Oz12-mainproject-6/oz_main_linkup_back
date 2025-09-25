@@ -12,6 +12,8 @@ class UserType(str, Enum):
 
     FAN = "fan"
     COMPANY = "company"
+    ADMIN = "admin"
+    BAN = "ban"
 
 
 class User(TimestampMixin):
@@ -62,7 +64,7 @@ class Company(TimestampMixin):
     """소속사 모델"""
 
     id = fields.BigIntField(pk=True, description="소속사 ID")
-    user = fields.OneToOneField(
+    user: fields.OneToOneRelation["User"] = fields.OneToOneField(
         "models.User",
         related_name="company_profile",
         description="소속사 계정",

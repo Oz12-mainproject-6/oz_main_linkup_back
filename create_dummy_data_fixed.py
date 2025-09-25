@@ -7,6 +7,7 @@ from app.config import TORTOISE_ORM
 from app.features.artists.models import Artist, ArtistRole, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
+from app.features.posts.models import Comment, Like, Post
 from app.features.subscriptions.models import Subscription
 from app.features.users.auth import get_password_hash
 from app.features.users.models import Company, User, UserType
@@ -20,6 +21,9 @@ async def create_dummy_data():
 
         # 기존 더미 데이터 완전 삭제 (순서 중요)
         print("🧹 기존 데이터 정리...")
+        await Like.all().delete()  # 좋아요 먼저 삭제
+        await Comment.filter(content__contains="더미").delete()  # 댓글 삭제
+        await Post.filter(content__contains="더미").delete()  # 포스트 삭제
         await SharedImage.filter(name__contains="더미").delete()
         await Subscription.all().delete()  # 간단하게 모든 구독 삭제
         await Events.filter(title__contains="더미").delete()
@@ -28,7 +32,18 @@ async def create_dummy_data():
         await User.filter(email__contains="dummy").delete()
         print("✅ 기존 데이터 정리 완료")
 
-        # 1. 회사 사용자 생성
+        # 1. 관리자 생성
+        print("👑 관리자 생성 중...")
+        admin_user = await User.create(
+            email="admin_dummy@admin.com",
+            password=get_password_hash("admin123!"),
+            nickname="관리자",
+            user_type=UserType.ADMIN,
+            is_email_verified=True,
+        )
+        print("✅ 관리자 1개 생성 완료")
+
+        # 2. 회사 사용자 생성
         print("👔 회사 사용자 생성 중...")
         company_users = []
         company_data = [
@@ -48,7 +63,7 @@ async def create_dummy_data():
             company_users.append(user)
         print(f"✅ 회사 사용자 {len(company_users)}개 생성 완료")
 
-        # 2. 회사 프로필 생성
+        # 3. 회사 프로필 생성
         print("🏢 회사 프로필 생성 중...")
         companies = []
         for i, (user, (name, _)) in enumerate(
@@ -64,10 +79,21 @@ async def create_dummy_data():
             companies.append(company)
         print(f"✅ 회사 프로필 {len(companies)}개 생성 완료")
 
-        # 3. 팬 사용자 생성
+        # 4. 팬 사용자 생성
         print("👥 팬 사용자 생성 중...")
         fan_users = []
-        fan_names = ["김팬", "이팬", "박팬", "최팬", "정팬"]
+        fan_names = [
+            "김팬",
+            "이팬",
+            "박팬",
+            "최팬",
+            "정팬",
+            "장팬",
+            "윤팬",
+            "임팬",
+            "한팬",
+            "오팬",
+        ]
 
         for i, name in enumerate(fan_names):
             user = await User.create(
@@ -80,7 +106,7 @@ async def create_dummy_data():
             fan_users.append(user)
         print(f"✅ 팬 사용자 {len(fan_users)}개 생성 완료")
 
-        # 4. 아티스트 생성 (필수 필드만)
+        # 5. 아티스트 생성 (필수 필드만)
         print("🎤 아티스트 생성 중...")
         artists = []
         artist_data = [
@@ -104,7 +130,7 @@ async def create_dummy_data():
             artists.append(artist)
         print(f"✅ 아티스트 {len(artists)}개 생성 완료")
 
-        # 5. 이벤트 생성
+        # 6. 이벤트 생성
         print("📅 이벤트 생성 중...")
         events = []
         event_types = ["더미 팬미팅", "더미 콘서트", "더미 쇼케이스"]
@@ -133,7 +159,7 @@ async def create_dummy_data():
             events.append(event)
         print(f"✅ 이벤트 {len(events)}개 생성 완료")
 
-        # 6. 구독 관계 생성
+        # 7. 구독 관계 생성
         print("💝 구독 관계 생성 중...")
         subscriptions = []
         for fan in fan_users:
@@ -144,7 +170,7 @@ async def create_dummy_data():
                 subscriptions.append(subscription)
         print(f"✅ 구독 관계 {len(subscriptions)}개 생성 완료")
 
-        # 7. 이미지 생성
+        # 8. 이미지 생성
         print("🖼️ 이미지 생성 중...")
         images = []
         for i, artist in enumerate(artists):
@@ -161,7 +187,6 @@ async def create_dummy_data():
                 image_type=ImageType.FACE,
                 uploaded_by=uploader,
                 artist=artist,
-                is_public=True,
             )
 
             # Torso 이미지
@@ -171,15 +196,90 @@ async def create_dummy_data():
                 image_type=ImageType.TORSO,
                 uploaded_by=uploader,
                 artist=artist,
-                is_public=True,
             )
             images.extend([face_img, torso_img])
         print(f"✅ 이미지 {len(images)}개 생성 완료")
+
+        # 9. 포스트 생성
+        print("📝 포스트 생성 중...")
+        posts = []
+        post_contents = [
+            "더미 포스트 - 오늘 정말 좋은 하루였어요! 팬분들 사랑해요 💕",
+            "더미 포스트 - 새로운 앨범 작업 중이에요! 기대해주세요 🎵",
+            "더미 포스트 - 콘서트 연습하느라 힘들지만 재밌어요 ✨",
+            "더미 포스트 - 팬분들이 보내주신 응원 메시지 잘 받았어요 ❤️",
+            "더미 포스트 - 날씨가 좋아서 기분이 좋네요! 모두 좋은 하루 되세요 ☀️",
+            "더미 포스트 - 드디어 새 곡 녹음 완료! 곧 들려드릴게요 🎤",
+            "더미 포스트 - 멤버들과 맛있는 저녁 먹었어요! 행복한 시간 🍽️",
+            "더미 포스트 - 무대 위에서 여러분과 함께할 수 있어서 감사해요 🙏",
+        ]
+
+        # 실제 생성된 아티스트들을 다시 조회
+        db_artists = await Artist.filter(email__contains="dummy").all()
+        print(f"DB에서 조회한 아티스트 수: {len(db_artists)}")
+
+        for i, content in enumerate(post_contents):
+            if not db_artists:
+                print("❌ 생성된 아티스트가 없습니다. 포스트 생성을 건너뛰겠습니다.")
+                break
+
+            fan = fan_users[i % len(fan_users)]
+            artist = db_artists[i % len(db_artists)]
+
+            print(f"포스트 생성: fan_id={fan.id}, artist_id={artist.id}")
+
+            post = await Post.create(user=fan, artist=artist, content=content)
+            posts.append(post)
+        print(f"✅ 포스트 {len(posts)}개 생성 완료")
+
+        # 10. 댓글 생성
+        print("💬 댓글 생성 중...")
+        comments = []
+        comment_texts = [
+            "더미 댓글 - 정말 좋은 글이네요!",
+            "더미 댓글 - 항상 응원하고 있어요 💪",
+            "더미 댓글 - 멋진 포스트 감사해요!",
+            "더미 댓글 - 다음 활동도 기대할게요",
+            "더미 댓글 - 오늘도 수고하셨어요!",
+            "더미 댓글 - 건강하게 활동해주세요 ❤️",
+            "더미 댓글 - 최고예요! 사랑해요",
+            "더미 댓글 - 언제나 응원할게요!",
+        ]
+
+        for post in posts:
+            # 각 포스트당 2-3개의 댓글 생성
+            num_comments = (hash(str(post.id)) % 3) + 1  # 1-3개 랜덤
+            for j in range(num_comments):
+                commenter = fan_users[j % len(fan_users)]
+                comment_text = comment_texts[(post.id + j) % len(comment_texts)]
+
+                comment = await Comment.create(
+                    post=post, user=commenter, content=comment_text
+                )
+                comments.append(comment)
+        print(f"✅ 댓글 {len(comments)}개 생성 완료")
+
+        # 11. 좋아요 생성
+        print("👍 좋아요 생성 중...")
+        likes = []
+        for post in posts:
+            # 각 포스트당 1-4개의 좋아요 생성
+            num_likes = (hash(str(post.id)) % 4) + 1  # 1-4개 랜덤
+            liked_users = set()
+
+            for j in range(num_likes):
+                liker = fan_users[j % len(fan_users)]
+                if liker.id not in liked_users:  # 중복 좋아요 방지
+                    liked_users.add(liker.id)
+                    like = await Like.create(post=post, user=liker)
+                    likes.append(like)
+        print(f"✅ 좋아요 {len(likes)}개 생성 완료")
 
         await Tortoise.close_connections()
 
         print("\n🎉 모든 더미 데이터 생성 완료!")
         print("\n📊 생성된 데이터:")
+        print("- 관리자: 1개")
         print(f"- 회사: {len(companies)}개")
         print(f"- 회사 사용자: {len(company_users)}개")
         print(f"- 팬 사용자: {len(fan_users)}개")
@@ -187,8 +287,13 @@ async def create_dummy_data():
         print(f"- 이벤트: {len(events)}개")
         print(f"- 구독: {len(subscriptions)}개")
         print(f"- 이미지: {len(images)}개")
+        print(f"- 포스트: {len(posts)}개")
+        print(f"- 댓글: {len(comments)}개")
+        print(f"- 좋아요: {len(likes)}개")
 
         print("\n👥 테스트 계정:")
+        print("📌 관리자 계정:")
+        print(f"  - {admin_user.email} / admin123!")
         print("📌 회사 계정:")
         for user in company_users:
             print(f"  - {user.email} / company123!")

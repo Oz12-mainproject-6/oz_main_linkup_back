@@ -2,16 +2,15 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.features.users.auth import verify_token
-from app.features.users.models import User
+from app.features.users.models import User, UserType
 
 security = HTTPBearer()
 
 
-async def get_current_user(
+async def get_superuser_bypass_ban(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
-    """현재 사용자 조회 (JWT 토큰 기반) - 밴 상태 체크 포함"""
-
+    """슈퍼유저 인증 (밴 체크 없이)"""
     token = credentials.credentials
     payload = verify_token(token)
 
@@ -37,39 +36,16 @@ async def get_current_user(
             detail="사용자를 찾을 수 없습니다.",
         )
 
-    # 밴된 사용자 체크
-    from app.features.users.models import UserType
-
-    if user.user_type == UserType.BAN:
+    # 관리자 권한 체크
+    if user.user_type not in [UserType.ADMIN, UserType.COMPANY]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="계정이 차단되어 서비스를 이용할 수 없습니다.",
+            detail="슈퍼유저만 접근 가능합니다.",
         )
 
     return user
 
 
-async def get_current_fan_user(current_user: User = Depends(get_current_user)) -> User:
-    """팬 유저만 접근 가능"""
-    from app.features.users.models import UserType
-
-    if current_user.user_type != UserType.FAN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="팬 유저만 접근 가능합니다.",
-        )
-    return current_user
-
-
-async def get_current_company_user(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """소속사 유저만 접근 가능 (기본 권한 체크만)"""
-    from app.features.users.models import UserType
-
-    if current_user.user_type != UserType.COMPANY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="소속사 유저만 접근 가능합니다.",
-        )
+async def get_superuser(current_user: User = Depends(get_superuser_bypass_ban)) -> User:
+    """슈퍼유저만 접근 가능"""
     return current_user
