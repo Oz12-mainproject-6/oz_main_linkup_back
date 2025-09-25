@@ -135,5 +135,5 @@ warn_no_return = false
 
 [tool.aerich]
 tortoise_orm = "app.config.TORTOISE_ORM"
-location = "./migrations"
+location = "migrations"
 src_folder = "./."
