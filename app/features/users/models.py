@@ -31,6 +31,11 @@ class User(TimestampMixin):
         default=UserType.FAN,
         description="사용자 타입",
     )
+    original_user_type = fields.CharEnumField(
+        UserType,
+        null=True,
+        description="차단 전 원래 사용자 타입",
+    )
 
     # 알림 설정
     push_notification_enabled = fields.BooleanField(
