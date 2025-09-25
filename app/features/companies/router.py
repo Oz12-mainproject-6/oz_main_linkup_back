@@ -98,7 +98,7 @@ async def get_artist_detail(
     current_user, company = user_company
     return await CompanyService.get_artist_detail(company, artist_id)
 
-@companies_router.post("/artists/with-images")
+@companies_router.post("/artists")
 async def create_artist_with_images(
     stage_name: str = Form(None),
     group_name: str = Form(None),
@@ -137,7 +137,7 @@ async def create_artist_with_images(
 #     return await CompanyService.update_artist(company, artist_id, request)
 
 
-@companies_router.put("/artists/with-images/{artist_id}")
+@companies_router.put("/artists/{artist_id}")
 async def update_artist_with_images(
     artist_id: int,
     stage_name: str = Form(None),
