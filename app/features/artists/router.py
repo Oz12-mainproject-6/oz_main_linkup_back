@@ -22,8 +22,12 @@ async def get_idol_list(
     artist_type: str | None = Query(
         None, description="아티스트 타입 필터 (group/individual)"
     ),
+    subscription_is_active: bool | None = Query(
+        None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
+    ),
     limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
     page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
+    current_user: User | None = Depends(get_current_user),
 ):
     """아이돌 리스트 조회 (활성 상태만)"""
 
@@ -36,6 +40,13 @@ async def get_idol_list(
     # 필터 적용
     if artist_type:
         query = query.filter(artist_type=artist_type)
+    
+    # 구독 중인 아티스트만 필터링 (로그인된 사용자만)
+    if subscription_is_active and current_user:
+        subscribed_artist_ids = await Subscription.filter(
+            user=current_user, is_active=True
+        ).values_list("artist_id", flat=True)
+        query = query.filter(id__in=subscribed_artist_ids)
 
     # 총 개수 조회
     total = await query.count()
@@ -48,31 +59,35 @@ async def get_idol_list(
         .limit(limit)
     )
 
-    # 각 아티스트의 프로필 이미지 조회 (FACE 타입 우선)
+    # 각 아티스트의 모든 이미지 URL 조회
     artist_list = []
     for artist in artists:
-        profile_image_url = None
-
-        # FACE 타입 이미지를 우선 조회, 없으면 TORSO 타입 조회
+        # 모든 이미지 타입 조회
         face_image = await SharedImage.filter(
             artist=artist, image_type=ImageType.FACE
         ).first()
+        torso_image = await SharedImage.filter(
+            artist=artist, image_type=ImageType.TORSO
+        ).first()
+        banner_image = await SharedImage.filter(
+            artist=artist, image_type=ImageType.BANNER
+        ).first()
 
+        # 프로필 이미지는 FACE 우선, 없으면 TORSO 사용 (호환성을 위해)
+        profile_image_url = None
         if face_image:
             profile_image_url = face_image.url
-        else:
-            # FACE가 없으면 TORSO 이미지 조회
-            torso_image = await SharedImage.filter(
-                artist=artist, image_type=ImageType.TORSO
-            ).first()
-            if torso_image:
-                profile_image_url = torso_image.url
+        elif torso_image:
+            profile_image_url = torso_image.url
 
         artist_list.append(
             ArtistListResponse(
                 id=artist.id,
                 name=artist.stage_name or artist.group_name or f"Artist {artist.id}",
                 profile_image=profile_image_url,
+                face_url=face_image.url if face_image else None,
+                torso_url=torso_image.url if torso_image else None,
+                banner_url=banner_image.url if banner_image else None,
             )
         )
 
