@@ -22,7 +22,7 @@ async def get_idol_list(
     artist_type: str | None = Query(
         None, description="아티스트 타입 필터 (group/individual)"
     ),
-    subscription_is_active: bool | None = Query(
+    is_active: bool | None = Query(
         None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
     ),
     limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
@@ -42,7 +42,7 @@ async def get_idol_list(
         query = query.filter(artist_type=artist_type)
     
     # 구독 중인 아티스트만 필터링 (로그인된 사용자만)
-    if subscription_is_active and current_user:
+    if is_active and current_user:
         subscribed_artist_ids = await Subscription.filter(
             user=current_user, is_active=True
         ).values_list("artist_id", flat=True)
