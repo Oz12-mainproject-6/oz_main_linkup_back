@@ -93,68 +93,8 @@ async def bulk_create_events(
     )
 
 
-@event_router.post("/file/upload", response_model=FileUploadResponse)
-async def upload_events_file(
-    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
-):
-    """파일 업로드"""
-
-    if not file.filename.endswith((".xlsx", ".csv")):
-        raise HTTPException(
-            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
-        )
-
-    try:
-        result = await EventService.process_upload_file(file)
-
-        if result.successful > 0 and background_tasks:
-            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
-            background_tasks.add_task(
-                notification_service.send_batch_notification,
-                recent_events,
-                "file_upload",
-            )
-
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
 
 
-@event_router.post("/file/upload-all", response_model=FileUploadResponse)
-async def upload_and_create_bulk_events(
-    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
-):
-    """
-    파일 업로드 후 일괄 이벤트 생성
-    - Excel(.xlsx) 또는 CSV(.csv) 지원
-    - 성공한 이벤트에 대해 알림 전송
-    """
-    if not file.filename.endswith((".xlsx", ".csv")):
-        raise HTTPException(
-            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
-        )
-
-    try:
-        # EventService에서 처리 결과 반환
-        result = await EventService.process_upload_file(file)
-
-        # 알림 전송
-        if getattr(result, "successful", 0) > 0 and background_tasks:
-            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
-            background_tasks.add_task(
-                notification_service.send_batch_notification,
-                recent_events,
-                "file_upload_bulk",
-            )
-
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
 
 
 # ---------------------------
