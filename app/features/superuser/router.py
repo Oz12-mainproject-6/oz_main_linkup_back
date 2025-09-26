@@ -41,7 +41,6 @@ async def get_users(
             id=user.id,
             email=user.email,
             nickname=user.nickname,
-            phone_number=user.phone_number,
             user_type=user.user_type,
             oauth_provider=user.oauth_provider,
             is_email_verified=user.is_email_verified,
