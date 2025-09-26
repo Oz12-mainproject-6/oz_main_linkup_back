@@ -3,10 +3,10 @@ from tortoise.exceptions import DoesNotExist
 
 from app.features.artists.models import Artist, ArtistType
 from app.features.images.models import ImageType, SharedImage
+from app.features.notifications.models import Subscription
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
 
-from app.features.notifications.models import Subscription
 from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -27,7 +27,7 @@ async def create_subscription(
     existing_subscription = await Subscription.filter(
         user=current_user, artist=artist
     ).first()
-    
+
     if existing_subscription:
         if existing_subscription.is_active:
             raise HTTPException(status_code=400, detail="이미 구독 중입니다.")

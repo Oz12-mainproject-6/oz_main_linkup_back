@@ -2,7 +2,7 @@ import pytest
 from tortoise import Tortoise
 
 from app.features.artists.models import Artist, ArtistType
-from app.features.subscriptions.models import Subscription
+from app.features.notifications.models import Subscription
 from app.features.users.models import Company, User, UserType
 
 
@@ -15,7 +15,7 @@ async def setup_subscription_test_db():
             "models": [
                 "app.features.users.models",
                 "app.features.artists.models",
-                "app.features.subscriptions.models",
+                "app.features.notifications.models",
             ]
         },
     )
