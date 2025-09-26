@@ -462,6 +462,16 @@ class CompanyService:
                 detail="해당 아티스트를 찾을 수 없습니다.",
             )
 
+        # stage_name 또는 group_name 중 하나는 필수 (업데이트 후 기준)
+        final_stage_name = stage_name if stage_name is not None else artist.stage_name
+        final_group_name = group_name if group_name is not None else artist.group_name
+        
+        if not final_stage_name and not final_group_name:
+            raise HTTPException(
+                status_code=400,
+                detail="stage_name 또는 group_name 중 하나는 필수입니다",
+            )
+
         # 아티스트 정보 업데이트 (None이 아닌 값만)
         if stage_name is not None:
             artist.stage_name = stage_name

@@ -145,7 +145,7 @@ async def update_artist_with_images(
     group_name: str = Form(None),
     debut_date: date = Form(None),
     birthdate: date = Form(None),
-    artist_type: ArtistType = Form(None),
+    artist_type: ArtistType | None = Form(...),
     face_image: UploadFile = File(None),
     torso_image: UploadFile = File(None),
     banner_image: UploadFile = File(None),
@@ -153,6 +153,8 @@ async def update_artist_with_images(
 ):
     """아티스트 정보와 이미지 업데이트 (POST와 동일한 Form 방식)"""
     current_user, company = user_company
+    
+    # POST와 똑같이 직접 전달 (복잡한 process_file 로직 제거)
     await CompanyService.update_artist_with_images_form(
         company,
         current_user,
