@@ -19,7 +19,7 @@ posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
 
 # ----------------- Post CRUD -----------------
-@posts_router.post("/", response_model=schemas.PostResponse)
+@posts_router.post("/")
 async def create_post(
     artist_id: int = Form(...),
     post_content: str = Form(...),
@@ -46,23 +46,8 @@ async def create_post(
         content=post_content,
         image_url=image_url,
     )
-    await post.fetch_related("user", "artist")
 
-    # 좋아요 수 계산
-    likes_count = await models.Like.filter(post=post).count()
-
-    return schemas.PostResponse(
-        id=post.id,
-        content=post.content,
-        image_url=post.image_url,
-        user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
-        artist=schemas.ArtistResponse(
-            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
-        ),
-        likes_count=likes_count,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-    )
+    return {"detail": "포스트가 성공적으로 생성되었습니다.", "post_id": post.id}
 
 
 @posts_router.get("/", response_model=list[schemas.PostResponse])
@@ -173,6 +158,8 @@ async def update_post(
 
     # 좋아요 수 계산
     likes_count = await models.Like.filter(post=post).count()
+    # 댓글 수 계산
+    comments_count = await models.Comment.filter(post=post).count()
 
     return schemas.PostResponse(
         id=post.id,
@@ -183,6 +170,7 @@ async def update_post(
             id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
         ),
         likes_count=likes_count,
+        comments_count=comments_count,
         created_at=post.created_at,
         updated_at=post.updated_at,
     )

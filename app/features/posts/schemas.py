@@ -39,6 +39,7 @@ class PostResponse(BaseModel):
     user: UserResponse
     artist: ArtistResponse
     likes_count: int
+    comments_count: int = 0  # 댓글 수 필드 추가
     created_at: datetime
     updated_at: datetime
 
