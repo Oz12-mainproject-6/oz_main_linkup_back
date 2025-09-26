@@ -25,6 +25,8 @@ class Post(TimestampMixin):
     )
 
     content = fields.TextField(description="게시글 내용")
+    image_url = fields.TextField(null=True, description="포스트 이미지 URL")
+    # S3에 이미지 업로드 후 URL 저장하는 필드 추가
 
     class Meta:
         table = "post"
