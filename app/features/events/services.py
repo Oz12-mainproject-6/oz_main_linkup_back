@@ -33,6 +33,7 @@ class EventCRUD:
         is_active: bool = True,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
+        subscribed_artist_ids: list[int] | None = None,  # 구독 중인 아티스트 ID 목록
     ) -> tuple[list[Events], int]:
         """이벤트 목록 조회"""
         query = Events.filter(is_active=is_active)
@@ -50,6 +51,8 @@ class EventCRUD:
             query = query.filter(start_time__gte=start_date)
         if end_date:
             query = query.filter(start_time__lte=end_date)
+        if subscribed_artist_ids is not None:
+            query = query.filter(artist_id__in=subscribed_artist_ids)
 
         total = await query.count()
         events = (

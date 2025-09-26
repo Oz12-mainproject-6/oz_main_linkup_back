@@ -1,6 +1,7 @@
+import traceback
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
@@ -14,6 +15,9 @@ from app.features.events.schemas import (
     FileUploadResponse,
 )
 from app.features.events.services import EventCRUD, EventService, notification_service
+from app.features.notifications.models import Subscription
+from app.features.users.dependencies import get_current_user
+from app.features.users.models import User
 
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -26,9 +30,10 @@ async def get_events(
     artist_id: int | None = Query(None, description="아티스트 id"),
     category: EventCategory | None = Query(None, description="일정 종류"),
     visibility: EventVisibility | None = Query(None, description="공개범위"),
-    is_active: bool = Query(True, description="활동여부"),
+    is_active: bool | None = Query(None, description="구독 중인 아티스트의 이벤트만 조회 (true: 구독 중만, null: 전체)"),
     start_date: str | None = Query(None, description="YYYY-MM-DD format"),
     end_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    current_user: User | None = Depends(get_current_user),
 ):
     """이벤트 목록 조회"""
     try:
@@ -40,6 +45,13 @@ async def get_events(
             status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
         ) from err
 
+    # 구독 중인 아티스트 필터링
+    subscribed_artist_ids = None
+    if is_active and current_user:
+        subscribed_artist_ids = await Subscription.filter(
+            user=current_user, is_active=True
+        ).values_list("artist_id", flat=True)
+
     events, total = await EventCRUD.get_list(
         skip=skip,
         limit=limit,
@@ -47,9 +59,10 @@ async def get_events(
         artist_id=artist_id,
         category=category,
         visibility=visibility,
-        is_active=is_active,
+        is_active=True,  # 활성 이벤트만 조회 (기본값)
         start_date=start_dt,
         end_date=end_dt,
+        subscribed_artist_ids=subscribed_artist_ids,  # 구독 필터링 추가
     )
 
     return EventListResponse(
@@ -179,6 +192,5 @@ async def scrap_events(artist_name: str, unit_id: str):
         return {"events": events}
     except Exception as e:
         # 더 자세한 에러 정보 반환
-        import traceback
 
         return {"error": str(e), "traceback": traceback.format_exc()}
