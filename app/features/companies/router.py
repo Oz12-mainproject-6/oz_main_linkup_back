@@ -110,7 +110,6 @@ async def create_artist_with_images(
     group_name: str = Form(None),
     debut_date: date = Form(None),
     birthdate: date = Form(None),
-    artist_type: ArtistType = Form(...),
     face_image: UploadFile = File(None),
     torso_image: UploadFile = File(None),
     banner_image: UploadFile = File(None),
@@ -125,7 +124,6 @@ async def create_artist_with_images(
         group_name,
         debut_date,
         birthdate,
-        artist_type,
         face_image,
         torso_image,
         banner_image,
@@ -189,11 +187,11 @@ async def delete_artist(
     return await CompanyService.delete_artist(company, artist_id)
 
 
-@companies_router.post("/artists/{artist_id}/upload-all", response_model=FileUploadResponse)
+@companies_router.post("/artists/{artist_id}/upload-all", response_model=None)
 async def upload_artist_events_file(
     artist_id: int,
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks | None = None,
+    background_tasks = None,
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
     """
@@ -236,6 +234,7 @@ async def upload_artist_events_file(
 
 @companies_router.get("/artists/upload-template")
 async def download_artist_events_template(
+    artist_id: int,
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
     """

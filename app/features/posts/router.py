@@ -21,8 +21,8 @@ posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 # ----------------- Post CRUD -----------------
 @posts_router.post("/")
 async def create_post(
-    artist_id: int = Form(...),
-    post_content: str = Form(...),
+    artist_id: int = Form(...) | None,
+    post_content: str = Form(...) | None,
     post_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
 ):

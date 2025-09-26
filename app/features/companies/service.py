@@ -305,7 +305,6 @@ class CompanyService:
         group_name: str | None = None,
         debut_date: date | None = None,
         birthdate: date | None = None,
-        artist_type: ArtistType | None = None,
         face_image: UploadFile | None = None,
         torso_image: UploadFile | None = None,
         banner_image: UploadFile | None = None,
