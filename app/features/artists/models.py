@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from tortoise import fields
 
 from app.core.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.features.users.models import Company
 
 
 class ArtistType(str, Enum):
@@ -34,7 +40,7 @@ class Artist(TimestampMixin):
     """아티스트 모델 (그룹/멤버/솔로 통합)"""
 
     id = fields.BigIntField(pk=True, description="아티스트 ID")
-    company = fields.ForeignKeyField(
+    company: fields.ForeignKeyRelation["Company"] = fields.ForeignKeyField(
         "models.Company",
         related_name="artists",
         description="소속사",
@@ -67,7 +73,7 @@ class Artist(TimestampMixin):
         ArtistType,
         description="아티스트 타입",
     )
-    parent_group = fields.ForeignKeyField(
+    parent_group: fields.ForeignKeyRelation["Artist"] = fields.ForeignKeyField(
         "models.Artist",
         related_name="members",
         null=True,

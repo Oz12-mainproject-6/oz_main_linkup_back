@@ -22,14 +22,21 @@ class User(TimestampMixin):
     id = fields.BigIntField(pk=True, description="사용자 ID")
     email = fields.CharField(max_length=200, unique=True, description="이메일")
     password = fields.CharField(max_length=200, description="비밀번호")
-    phone_number = fields.CharField(max_length=20, null=True, description="전화번호")
     nickname = fields.CharField(max_length=50, null=True, description="별명")
+    profile_image_url = fields.CharField(
+        max_length=500, null=True, description="프로필 이미지 URL"
+    )
 
     # 사용자 타입 구분
     user_type = fields.CharEnumField(
         UserType,
         default=UserType.FAN,
         description="사용자 타입",
+    )
+    original_user_type = fields.CharEnumField(
+        UserType,
+        null=True,
+        description="차단 전 원래 사용자 타입",
     )
 
     # 알림 설정
@@ -64,7 +71,7 @@ class Company(TimestampMixin):
     """소속사 모델"""
 
     id = fields.BigIntField(pk=True, description="소속사 ID")
-    user = fields.OneToOneField(
+    user: fields.OneToOneRelation["User"] = fields.OneToOneField(
         "models.User",
         related_name="company_profile",
         description="소속사 계정",

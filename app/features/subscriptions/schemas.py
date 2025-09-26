@@ -8,6 +8,20 @@ class SubscriptionCreate(BaseModel):
 class SubscriptionOut(BaseModel):
     id: int
     artist_id: int
+    group_name: str | None = None
+    stage_name: str | None = None
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class SubscriptionWithImageOut(BaseModel):
+    id: int
+    artist_id: int
+    group_name: str | None = None
+    stage_name: str | None = None
+    artist_image_url: str | None = None
     is_active: bool
 
     class Config:

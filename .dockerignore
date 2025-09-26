@@ -37,7 +37,7 @@ logs/
 htmlcov/
 
 # Local migrations (regenerated in container)
-migrations/
+# migrations/
 
 # Documentation
 README.md

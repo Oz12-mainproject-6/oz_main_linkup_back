@@ -16,7 +16,7 @@ dependencies = [
     # Authentication & Security
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    "bcrypt>=4.0.0",
+    "bcrypt>=4.0.0,<5.0.0",
     "python-multipart>=0.0.6",
     "email-validator>=2.1.0",
     # Social Login
@@ -24,19 +24,19 @@ dependencies = [
     "httpx>=0.27.0",
     # AWS & Image Processing
     "boto3>=1.34.0",
-    "pillow>=10.0.0",
+    "pillow>=10.0.0",  # Image processing (이미지 처리용)
     # Notifications & Background Tasks
     "pyfcm>=1.5.4",
     "fastapi-mail>=1.4.0",
-    "celery>=5.3.0",
-    "redis>=5.0.0",
     # Utilities
     "python-dateutil>=2.8.2",
     "pydantic-settings>=2.1.0",
-    "loguru>=0.7.0",
     "fastapi-limiter>=0.1.5",
-    "pandas>=2.3.2",
-    "openpyxl>=3.1.5",
+    "loguru>=0.7.0",  # 로깅 (코드에서 실제 사용 중)
+    "pandas>=2.3.2",  # Data analysis (events/services.py에서 사용)
+    "openpyxl>=3.1.5",  # Excel files (events/services.py에서 사용)
+    "beautifulsoup4>=4.13.5",  # Web scraping (scrapping.py에서 사용)
+    "requests>=2.31.0",  # HTTP requests (scrapping.py에서 사용)
 ]
 
 [project.optional-dependencies]
@@ -59,6 +59,18 @@ dev = [
     
     # Database tools
     "pgcli>=4.0.0",  # PostgreSQL CLI
+    
+    # Heavy development packages (개발환경에서만 필요)
+    "loguru>=0.7.0",  # 로깅
+    "celery>=5.3.0",  # Background tasks
+    "redis>=5.0.0",  # Redis
+    "pandas>=2.3.2",  # Data analysis
+    "openpyxl>=3.1.5",  # Excel
+    "claude>=0.4.11",  # AI tools
+    "claude-code>=0.0.1",
+    "selenium>=4.35.0",  # Browser automation
+    "webdriver-manager>=4.0.2",
+    "playwright>=1.55.0",  # Browser testing
 ]
 
 prod = [
@@ -92,6 +104,8 @@ ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "UP034", # avoid extraneous parentheses(Tortoise ORM 과 충돌)
+    "UP037", # remove quotes from type annotation(Tortoise ORM ForeignKeyRelation과 충돌)
 ]
 
 [tool.ruff.format]

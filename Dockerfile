@@ -13,9 +13,10 @@ WORKDIR /app
 # Python 의존성 파일들 복사
 COPY pyproject.toml uv.lock ./
 
-# pip 업그레이드 및 의존성 설치
-RUN python -m pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .[dev]
+
+# 의존성 설치
+RUN uv sync
+
 
 # 애플리케이션 코드 복사
 COPY . .

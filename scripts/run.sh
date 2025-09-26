@@ -33,33 +33,17 @@ if [ ! -d "migrations" ]; then
     uv run aerich init -t app.config.TORTOISE_ORM --location migrations
 fi
 
-# 데이터베이스가 비어있으면 초기화
-echo "🗄️ Checking database state..."
-DB_TABLES=$(uv run python -c "
-import asyncio
-from tortoise import Tortoise
-from app.config import TORTOISE_ORM
+# 간소화된 마이그레이션 로직
+echo "🗄️ Setting up database..."
 
-async def check_tables():
-    await Tortoise.init(config=TORTOISE_ORM)
-    conn = Tortoise.get_connection('default')
-    tables = await conn.execute_query('SELECT table_name FROM information_schema.tables WHERE table_schema = \\'public\\';')
-    await Tortoise.close_connections()
-    return len(tables[1]) if tables[1] else 0
-
-result = asyncio.run(check_tables())
-print(result)
-" 2>/dev/null || echo "0")
-
-if [ "$DB_TABLES" = "0" ] || [ "$DB_TABLES" = "" ]; then
-    echo "🏗️ Initializing empty database..."
+# aerich이 초기화되지 않았으면 초기화
+if ! uv run aerich history >/dev/null 2>&1; then
+    echo "🏗️ Initializing database with aerich..."
     uv run aerich init-db
 else
-    echo "📊 Database has tables, running migrations..."
-    # 마이그레이션 생성 (변경사항이 있는 경우)
+    echo "📊 Running migrations..."
     uv run aerich migrate --name "auto_migration" 2>/dev/null || echo "No new migrations needed"
-    # 마이그레이션 적용
-    uv run aerich upgrade
+    uv run aerich upgrade 2>/dev/null || echo "No migrations to apply"
 fi
 
 echo "✅ Database setup complete!"
