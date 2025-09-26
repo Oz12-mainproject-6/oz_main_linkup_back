@@ -234,7 +234,6 @@ async def upload_artist_events_file(
 
 @companies_router.get("/artists/upload-template")
 async def download_artist_events_template(
-    artist_id: int,
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
     """
