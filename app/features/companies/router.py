@@ -94,6 +94,29 @@ async def get_company_artists(
     return await CompanyService.get_artists(company, is_active, limit, offset)
 
 
+@companies_router.get("/artists/upload-template")
+async def download_artist_events_template(
+    user_company: tuple[User, Company] = Depends(get_current_company_user),
+):
+    """
+    아티스트용 이벤트 업로드 템플릿 다운로드
+    - 간소화된 필드만 포함: title, description, start_time, end_time, location
+    """
+    current_user, company = user_company
+    
+    try:
+        file_stream = await EventService.generate_artist_template()
+        return StreamingResponse(
+            file_stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=artist_events_template.xlsx"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Template generation error: {str(e)}"
+        ) from e
+
+
 @companies_router.get("/artists/{artist_id}", response_model=DashboardArtistInfo)
 async def get_artist_detail(
     artist_id: int,
@@ -229,27 +252,4 @@ async def upload_artist_events_file(
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
-
-
-@companies_router.get("/artists/upload-template")
-async def download_artist_events_template(
-    user_company: tuple[User, Company] = Depends(get_current_company_user),
-):
-    """
-    아티스트용 이벤트 업로드 템플릿 다운로드
-    - 간소화된 필드만 포함: title, description, start_time, end_time, location
-    """
-    current_user, company = user_company
-    
-    try:
-        file_stream = await EventService.generate_artist_template()
-        return StreamingResponse(
-            file_stream,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=artist_events_template.xlsx"},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Template generation error: {str(e)}"
         ) from e
