@@ -24,7 +24,7 @@ dependencies = [
     "httpx>=0.27.0",
     # AWS & Image Processing
     "boto3>=1.34.0",
-    # "pillow>=10.0.0",  # 임시 비활성화 (실제 사용하지 않음)
+    "pillow>=10.0.0",  # Image processing (이미지 처리용)
     # Notifications & Background Tasks
     "pyfcm>=1.5.4",
     "fastapi-mail>=1.4.0",
@@ -35,8 +35,8 @@ dependencies = [
     "loguru>=0.7.0",  # 로깅 (코드에서 실제 사용 중)
     "pandas>=2.3.2",  # Data analysis (events/services.py에서 사용)
     "openpyxl>=3.1.5",  # Excel files (events/services.py에서 사용)
-    # "beautifulsoup4>=4.13.5",  # Web scraping - 임시 비활성화 (용량 문제)
-    # "requests>=2.31.0",  # HTTP requests - 임시 비활성화 (용량 문제)
+    "beautifulsoup4>=4.13.5",  # Web scraping (scrapping.py에서 사용)
+    "requests>=2.31.0",  # HTTP requests (scrapping.py에서 사용)
 ]
 
 [project.optional-dependencies]
