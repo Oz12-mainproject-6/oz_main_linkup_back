@@ -16,7 +16,6 @@ MODELS = [
     "app.features.posts.models",
     "app.features.images.models",
     "app.features.notifications.models",
-    "app.features.subscriptions.models",
 ]
 
 
@@ -47,5 +46,9 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     """
     각 테스트 함수마다 독립적인 API 클라이언트를 제공합니다.
     """
-    async with AsyncClient(app=app, base_url="http://test") as c:
+    from httpx import ASGITransport
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         yield c

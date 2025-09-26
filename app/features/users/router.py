@@ -142,6 +142,7 @@ async def get_my_profile(
             UserPostResponse(
                 id=post.id,
                 content=post.content,
+                image_url=post.image_url,
                 artist_id=post.artist.id,
                 artist_name=artist_name,
                 likes_count=likes_count,

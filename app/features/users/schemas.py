@@ -57,6 +57,7 @@ class UserPostResponse(BaseModel):
 
     id: int
     content: str
+    image_url: str | None = None
     artist_id: int
     artist_name: str | None
     likes_count: int
