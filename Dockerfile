@@ -12,7 +12,7 @@ WORKDIR /app
 
 # uv 설치
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Python 의존성 파일들 복사
 COPY pyproject.toml uv.lock ./
