@@ -316,6 +316,9 @@ class CompanyService:
                 status_code=400,
                 detail="stage_name 또는 group_name 중 하나는 필수입니다",
             )
+        if not group_name:
+            artist_type = ArtistType.INDIVIDUAL
+        else : artist_type = ArtistType.GROUP
 
         # 1. Artist 생성
         artist = await Artist.create(
