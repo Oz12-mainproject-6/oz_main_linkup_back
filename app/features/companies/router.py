@@ -146,9 +146,9 @@ async def update_artist_with_images(
     debut_date: date = Form(None),
     birthdate: date = Form(None),
     artist_type: ArtistType = Form(None),
-    face_image_url: str = Form(None),
-    torso_image_url: str = Form(None),
-    banner_image_url: str = Form(None),
+    face_image: UploadFile = File(None),
+    torso_image: UploadFile = File(None),
+    banner_image: UploadFile = File(None),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
     """아티스트 정보와 이미지 업데이트 (POST와 동일한 Form 방식)"""
@@ -162,9 +162,9 @@ async def update_artist_with_images(
         debut_date,
         birthdate,
         artist_type,
-        face_image_url,
-        torso_image_url,
-        banner_image_url,
+        face_image,
+        torso_image,
+        banner_image,
     )
     return {
         "message": "아티스트 정보가 성공적으로 업데이트되었습니다.",
