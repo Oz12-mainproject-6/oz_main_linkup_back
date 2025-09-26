@@ -23,9 +23,7 @@ posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 async def create_post(
     artist_id: int = Form(...),
     post_content: str = Form(...),
-    post_image: UploadFile | None = File(
-        None
-    ),
+    post_image: UploadFile | None = File(None),
     current_user: User = Depends(get_current_user),
 ):
     """포스트 생성"""
