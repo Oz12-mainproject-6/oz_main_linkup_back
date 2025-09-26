@@ -28,6 +28,8 @@ echo "🔧 Setting up database migrations..."
 # aerich 디렉토리가 없으면 초기화
 if [ ! -d "migrations" ]; then
     echo "📦 Initializing aerich..."
+    # aerich init 버그 수정을 위해 디렉토리 수동 생성
+    mkdir -p migrations/models
     uv run aerich init -t app.config.TORTOISE_ORM --location migrations
 fi
 

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS "user" (
     "password" VARCHAR(200) NOT NULL,
     "phone_number" VARCHAR(20),
     "nickname" VARCHAR(50),
-    "user_type" VARCHAR(9) NOT NULL DEFAULT 'fan',
+    "user_type" VARCHAR(7) NOT NULL DEFAULT 'fan',
     "push_notification_enabled" BOOL NOT NULL DEFAULT True,
     "in_app_notification_enabled" BOOL NOT NULL DEFAULT True,
     "oauth_provider" VARCHAR(50),
@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS "post" (
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "content" TEXT NOT NULL,
+    "image_url" TEXT,
     "artist_id" BIGINT NOT NULL REFERENCES "artist" ("id") ON DELETE CASCADE,
     "user_id" BIGINT NOT NULL REFERENCES "user" ("id") ON DELETE CASCADE
 );
@@ -165,6 +166,7 @@ COMMENT ON COLUMN "post"."created_at" IS '생성일시';
 COMMENT ON COLUMN "post"."updated_at" IS '수정일시';
 COMMENT ON COLUMN "post"."id" IS '포스트 ID';
 COMMENT ON COLUMN "post"."content" IS '게시글 내용';
+COMMENT ON COLUMN "post"."image_url" IS '포스트 이미지 URL';
 COMMENT ON COLUMN "post"."artist_id" IS '관련 아티스트';
 COMMENT ON COLUMN "post"."user_id" IS '작성자';
 COMMENT ON TABLE "post" IS '포스트 모델 (팬 포스트)';
@@ -206,7 +208,6 @@ CREATE TABLE IF NOT EXISTS "shared_image" (
     "size" BIGINT,
     "content_type" VARCHAR(100),
     "image_type" VARCHAR(5) NOT NULL,
-    "is_public" BOOL NOT NULL DEFAULT True,
     "artist_id" BIGINT REFERENCES "artist" ("id") ON DELETE CASCADE,
     "event_id" BIGINT REFERENCES "events" ("id") ON DELETE CASCADE,
     "uploaded_by_id" BIGINT NOT NULL REFERENCES "user" ("id") ON DELETE CASCADE
@@ -219,7 +220,6 @@ COMMENT ON COLUMN "shared_image"."name" IS '원본 파일명';
 COMMENT ON COLUMN "shared_image"."size" IS '파일 크기 (bytes)';
 COMMENT ON COLUMN "shared_image"."content_type" IS 'MIME 타입';
 COMMENT ON COLUMN "shared_image"."image_type" IS '이미지 타입';
-COMMENT ON COLUMN "shared_image"."is_public" IS '구독자가 사용 가능한지';
 COMMENT ON COLUMN "shared_image"."artist_id" IS '관련 아티스트';
 COMMENT ON COLUMN "shared_image"."event_id" IS '관련 이벤트';
 COMMENT ON COLUMN "shared_image"."uploaded_by_id" IS '업로드한 사용자 (소속사)';
