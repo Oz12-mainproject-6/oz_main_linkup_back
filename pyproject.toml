@@ -42,11 +42,7 @@ dependencies = [
     "webdriver-manager>=4.0.2",
     "playwright>=1.55.0",
     "background-tasks>=0.0.1",
-
     "loguru>=0.7.0",  # 로깅 (코드에서 실제 사용 중)
- 
-  
-    
     "requests>=2.31.0",  # HTTP requests (scrapping.py에서 사용)
 
 ]
