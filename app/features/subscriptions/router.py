@@ -49,14 +49,22 @@ async def create_subscription(
             user=current_user, artist=artist, subscription_type=SubscriptionType.DIRECT
         )
 
-        # 그룹을 구독한 경우, 같은 group_name을 가진 개별 멤버들도 자동 구독
-        if artist.artist_type == ArtistType.GROUP and artist.group_name:
-            # 같은 그룹명의 개별 멤버들 조회
+        # 그룹을 구독한 경우, 해당 그룹의 멤버들도 자동 구독
+        if artist.artist_type == ArtistType.GROUP:
+            # parent_group 관계를 사용하여 멤버들 조회 (더 정확함)
             group_members = await Artist.filter(
-                group_name=artist.group_name,
+                parent_group=artist,
                 artist_type=ArtistType.INDIVIDUAL,
                 is_active=True,
             )
+            
+            # parent_group이 설정되지 않은 경우 group_name으로 fallback
+            if not group_members and artist.group_name:
+                group_members = await Artist.filter(
+                    group_name=artist.group_name,
+                    artist_type=ArtistType.INDIVIDUAL,
+                    is_active=True,
+                )
 
             # 각 멤버에 대해 상속 구독 생성
             for member in group_members:
@@ -121,9 +129,7 @@ async def list_subscriptions(
                     id=sub.id,
                     artist_id=sub.artist.id,
                     group_name=sub.artist.group_name,
-                    stage_name=sub.artist.stage_name
-                    if sub.artist.artist_type != ArtistType.GROUP
-                    else None,
+                    stage_name=sub.artist.stage_name,
                     artist_image_url=face_image.url if face_image else None,
                     is_active=sub.is_active,
                     subscription_type=sub.subscription_type,
@@ -141,9 +147,7 @@ async def list_subscriptions(
                     id=sub.id,
                     artist_id=sub.artist.id,
                     group_name=sub.artist.group_name,
-                    stage_name=sub.artist.stage_name
-                    if sub.artist.artist_type != ArtistType.GROUP
-                    else None,
+                    stage_name=sub.artist.stage_name,
                     is_active=sub.is_active,
                     subscription_type=sub.subscription_type,
                 )
@@ -157,7 +161,7 @@ async def cancel_subscription(
 ):
     """구독 취소"""
     try:
-        sub = await Subscription.get(id=subscription_id, user=current_user)
+        sub = await Subscription.get(id=subscription_id, user=current_user, is_active=True)
         artist = await sub.artist
 
         # INHERITED 구독은 직접 취소 불가
@@ -175,16 +179,25 @@ async def cancel_subscription(
         if (
             sub.subscription_type == SubscriptionType.DIRECT
             and artist.artist_type == ArtistType.GROUP
-            and artist.group_name
         ):
-            # 같은 그룹의 개별 멤버들의 상속 구독 취소
+            # parent_group 관계를 사용하여 멤버들의 상속 구독 취소 (더 정확함)
             inherited_subscriptions = await Subscription.filter(
                 user=current_user,
                 subscription_type=SubscriptionType.INHERITED,
                 is_active=True,
-                artist__group_name=artist.group_name,
+                artist__parent_group=artist,
                 artist__artist_type=ArtistType.INDIVIDUAL,
             )
+            
+            # parent_group이 설정되지 않은 경우 group_name으로 fallback
+            if not inherited_subscriptions and artist.group_name:
+                inherited_subscriptions = await Subscription.filter(
+                    user=current_user,
+                    subscription_type=SubscriptionType.INHERITED,
+                    is_active=True,
+                    artist__group_name=artist.group_name,
+                    artist__artist_type=ArtistType.INDIVIDUAL,
+                )
 
             for inherited_sub in inherited_subscriptions:
                 inherited_sub.is_active = False

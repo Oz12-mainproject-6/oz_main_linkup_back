@@ -169,7 +169,7 @@ async def get_idol_detail(artist_name: str):
 
 @idol_router.get("/{artist_name}/info", response_model=ArtistSubscriptionInfo)
 async def get_idol_subscription_info(
-    artist_name: str, current_user: User = Depends(get_current_user)
+    artist_name: str, current_user: User | None = Depends(get_current_user)
 ):
     """구독 아티스트 확인 (로그인 필요, 활성 상태만)"""
 

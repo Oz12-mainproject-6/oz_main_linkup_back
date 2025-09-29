@@ -315,10 +315,24 @@ class CompanyService:
                 status_code=400,
                 detail="stage_name 또는 group_name 중 하나는 필수입니다",
             )
-        if not group_name:
-            artist_type = ArtistType.INDIVIDUAL
-        else:
+        # artist_type과 parent_group 자동 설정
+        parent_group = None
+        
+        if group_name and not stage_name:
+            # 그룹 (에스파)
             artist_type = ArtistType.GROUP
+        elif group_name and stage_name:
+            # 그룹 멤버 (카리나)
+            artist_type = ArtistType.INDIVIDUAL
+            # 같은 group_name을 가진 GROUP 찾기
+            parent_group = await Artist.filter(
+                group_name=group_name,
+                artist_type=ArtistType.GROUP,
+                is_active=True
+            ).first()
+        else:
+            # 솔로 아티스트 (아이유)
+            artist_type = ArtistType.INDIVIDUAL
 
         # 1. Artist 생성
         artist = await Artist.create(
@@ -328,6 +342,7 @@ class CompanyService:
             debut_date=debut_date,
             birthdate=birthdate,
             artist_type=artist_type,
+            parent_group=parent_group,
         )
 
         # 2. 이미지 3개 업로드 및 SharedImage 생성 (선택사항)
