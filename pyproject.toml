@@ -32,11 +32,23 @@ dependencies = [
     "python-dateutil>=2.8.2",
     "pydantic-settings>=2.1.0",
     "fastapi-limiter>=0.1.5",
+
+    "pandas>=2.3.2",
+    "openpyxl>=3.1.5",
+    "claude>=0.4.11",
+    "claude-code>=0.0.1",
+    "beautifulsoup4>=4.13.5",
+    "selenium>=4.35.0",
+    "webdriver-manager>=4.0.2",
+    "playwright>=1.55.0",
+    "background-tasks>=0.0.1",
+
     "loguru>=0.7.0",  # 로깅 (코드에서 실제 사용 중)
-    "pandas>=2.3.2",  # Data analysis (events/services.py에서 사용)
-    "openpyxl>=3.1.5",  # Excel files (events/services.py에서 사용)
-    "beautifulsoup4>=4.13.5",  # Web scraping (scrapping.py에서 사용)
+ 
+  
+    
     "requests>=2.31.0",  # HTTP requests (scrapping.py에서 사용)
+
 ]
 
 [project.optional-dependencies]
