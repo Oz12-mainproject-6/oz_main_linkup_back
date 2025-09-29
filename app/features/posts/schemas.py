@@ -48,14 +48,18 @@ class PostResponse(BaseModel):
 
 
 # ----------------- Comment -----------------
-"""
 class CommentCreate(BaseModel):
-    comment_content: str = Field(..., min_length=1, max_length=500)
+    comment_content: str
+
+    class Config:
+        from_attributes = True
 
 
 class CommentUpdate(BaseModel):
-    comment_content: str = Field(..., min_length=1, max_length=500)
-"""
+    comment_content: str
+
+    class Config:
+        from_attributes = True
 
 
 class CommentResponse(BaseModel):

@@ -267,7 +267,7 @@ async def get_post_likes(post_id: int):
 @posts_router.post("/{post_id}/comments", response_model=schemas.CommentResponse)
 async def create_comment(
     post_id: int,
-    comment_content: str = Form(...),
+    request: schemas.CommentCreate,
     current_user: User = Depends(get_current_user),
 ):
     """댓글 생성"""
@@ -278,7 +278,7 @@ async def create_comment(
     comment = await models.Comment.create(
         post=post,
         user=current_user,
-        content=comment_content,
+        content=request.comment_content,
     )
     await comment.fetch_related("user")
 
@@ -325,7 +325,7 @@ async def get_comments(post_id: int):
 @posts_router.put("/comments/{comment_id}", response_model=schemas.CommentResponse)
 async def update_comment(
     comment_id: int,
-    comment_content: str = Form(...),
+    request: schemas.CommentUpdate,
     current_user: User = Depends(get_current_user),
 ):
     """댓글 수정"""
@@ -339,7 +339,7 @@ async def update_comment(
     if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    comment.content = comment_content
+    comment.content = request.comment_content
     await comment.save()
 
     return schemas.CommentResponse(
