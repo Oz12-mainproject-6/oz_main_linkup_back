@@ -2,7 +2,7 @@ import httpx
 import pandas as pd
 import io
 import asyncio
-
+import re
 from typing import BinaryIO
 from typing import Any
 from fastapi import HTTPException, UploadFile
@@ -10,7 +10,6 @@ from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from app.external.scrapping import get_artist_schedule
 from app.features.events.schemas import FileUploadResponse
 from datetime import datetime, timedelta
 from tortoise.exceptions import DoesNotExist
@@ -766,16 +765,193 @@ notification_service = NotificationService()
 
 
 # author : Juwon
-# date : 2025.09.23
-# content : notification.py를 services.py로 이동
-async def import_artist_events(artist_name: str, unit_id: str):
-    schedules = get_artist_schedule_by_name(artist_name, unit_id)
-    for s in schedules:
-        await Events.create(
-            title=s["title"],
-            date=s["date"],
-            category=["concert"],   # 필요시 매핑
-            visibility="public"
-        )
-    return schedules
+# date : 2025.09.25
+# content : 크롤링 관련 메서드들 추가
 
+@staticmethod
+async def import_scraped_events(scraped_events: list[dict], source: str) -> FileUploadResponse:
+    """크롤링된 이벤트를 DB에 저장"""
+    try:
+        events_data = []
+        errors = []
+
+        for i, event in enumerate(scraped_events):
+            try:
+                # 날짜 파싱
+                start_time = EventService._parse_scraped_date(
+                    event.get('date'),
+                    event.get('time')
+                )
+
+                # 카테고리 매핑
+                category = EventService._map_scraped_category(event.get('type', ''))
+
+                # 아티스트 ID 찾기 또는 생성
+                artist_id = await EventService._get_or_create_artist_for_scraped_event(
+                    event.get('artist'),
+                    source
+                )
+
+                if not artist_id:
+                    errors.append(f"Row {i + 1}: Artist not found or created")
+                    continue
+
+                event_data = {
+                    "artist_id": artist_id,
+                    "title": event.get('title', '').strip()[:200],  # 길이 제한
+                    "description": f"Source: {source}\n" + (event.get('description') or ''),
+                    "start_time": start_time,
+                    "end_time": None,  # 크롤링 데이터에는 종료시간이 없는 경우가 많음
+                    "location": (event.get('location') or '')[:200] if event.get('location') else None,
+                    "category": category,
+                    "visibility": EventVisibility.PUBLIC,
+                }
+
+                # 중복 체크
+                if not await EventService._is_duplicate_event(
+                        artist_id, event_data['title'], start_time
+                ):
+                    events_data.append(event_data)
+                else:
+                    logger.info(f"Duplicate event skipped: {event_data['title']}")
+
+            except Exception as e:
+                errors.append(f"Row {i + 1}: {str(e)}")
+
+        # 일괄 생성
+        created_count, creation_errors = await EventCRUD.bulk_create(events_data)
+        all_errors = errors + creation_errors
+
+        logger.info(f"Scraped events import: {created_count}/{len(scraped_events)} created from {source}")
+
+        return FileUploadResponse(
+            message=f"Scraped events from {source} processed",
+            total_processed=len(scraped_events),
+            successful=created_count,
+            failed=len(scraped_events) - created_count,
+            errors=all_errors[:10]
+        )
+
+    except Exception as e:
+        logger.error(f"Scraped events import error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Import processing error: {str(e)}"
+        )
+
+
+@staticmethod
+def _parse_scraped_date(date_str: str, time_str: str = None) -> datetime:
+    """크롤링된 날짜 문자열을 datetime으로 변환"""
+    if not date_str or date_str == "날짜 없음" or date_str == "날짜 미상":
+        return datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    try:
+        # 다양한 날짜 형식 처리
+        if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+            base_date = datetime.strptime(date_str[:10], '%Y-%m-%d')
+        elif re.match(r'\d{1,2}월\s*\d{1,2}일', date_str):
+            # "12월 25일" 형태
+            month_day = re.search(r'(\d{1,2})월\s*(\d{1,2})일', date_str)
+            if month_day:
+                month, day = month_day.groups()
+                current_year = datetime.now().year
+                base_date = datetime(current_year, int(month), int(day))
+            else:
+                base_date = datetime.now()
+        else:
+            base_date = datetime.now()
+
+        # 시간 정보 추가
+        if time_str:
+            time_match = re.search(r'(\d{1,2}):(\d{2})', time_str)
+            if time_match:
+                hour, minute = time_match.groups()
+                base_date = base_date.replace(hour=int(hour), minute=int(minute))
+
+        return base_date
+
+    except Exception as e:
+        logger.warning(f"Date parsing failed for '{date_str}': {str(e)}")
+        return datetime.now()
+
+
+@staticmethod
+def _map_scraped_category(type_str: str) -> EventCategory:
+    """크롤링된 타입을 EventCategory로 매핑"""
+    if not type_str:
+        return EventCategory.OTHER
+
+    type_lower = type_str.lower()
+
+    mapping = {
+        'concert': EventCategory.CONCERT,
+        '콘서트': EventCategory.CONCERT,
+        'fanmeeting': EventCategory.FANMEETING,
+        '팬미팅': EventCategory.FANMEETING,
+        'showcase': EventCategory.SHOWCASE,
+        '쇼케이스': EventCategory.SHOWCASE,
+        'broadcast': EventCategory.BROADCAST,
+        '방송': EventCategory.BROADCAST,
+        'variety': EventCategory.VARIETY,
+        '예능': EventCategory.VARIETY,
+        'music': EventCategory.MUSIC,
+        '음악': EventCategory.MUSIC,
+        'release': EventCategory.RELEASE,
+        '발매': EventCategory.RELEASE,
+        'comeback': EventCategory.COMEBACK,
+        '컴백': EventCategory.COMEBACK
+    }
+
+    for key, value in mapping.items():
+        if key in type_lower:
+            return value
+
+    return EventCategory.OTHER
+
+
+@staticmethod
+async def _get_or_create_artist_for_scraped_event(artist_name: str, source: str) -> int | None:
+    """크롤링된 이벤트의 아티스트 ID 찾기 또는 생성"""
+    if not artist_name:
+        return 1  # 기본 아티스트 ID
+
+    try:
+        from app.features.artists.models import Artist
+
+        artist = await Artist.filter(name__icontains=artist_name).first()
+        if artist:
+            return artist.id
+
+        # 기본 아티스트 ID 반환
+        logger.warning(f"Artist '{artist_name}' not found, using default artist ID")
+        return 1
+
+    except Exception as e:
+        logger.error(f"Error getting artist '{artist_name}': {str(e)}")
+        return 1
+
+
+@staticmethod
+async def _is_duplicate_event(artist_id: int, title: str, start_time: datetime) -> bool:
+    """중복 이벤트 체크"""
+    try:
+        from app.features.events.models import Events
+
+        # 같은 아티스트, 제목, 날짜가 같은 이벤트가 있는지 확인
+        start_date = start_time.date()
+        end_date = datetime.combine(start_date, datetime.max.time())
+
+        existing = await Events.filter(
+            artist_id=artist_id,
+            title=title,
+            start_time__gte=start_date,
+            start_time__lte=end_date,
+            is_active=True
+        ).first()
+
+        return existing is not None
+
+    except Exception as e:
+        logger.error(f"Error checking duplicate event: {str(e)}")
+        return False

@@ -5,15 +5,16 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
 
-from app.external.scrapping import get_artist_schedule
+from app.external.scrapping import get_myloveidol_schedule, fetch_myloveidol_json, parse_myloveidol_events
+from app.features.artists.models import Artist
 from app.features.events.services import EventCRUD, notification_service
-from app.features.events.models import EventCategory, EventVisibility
+from app.features.events.models import EventCategory, EventVisibility, Events
 
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
     EventResponse,
-    FileUploadResponse,
+    FileUploadResponse, EventOut,
 )
 from app.features.events.services import EventService
 
@@ -232,18 +233,96 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
             status_code=400, detail=f"File processing error: {str(e)}"
         ) from e
 
+#author : Juwon
+#date : 2025-09-25
+#content : 최애돌 사이트를 크롤링 하는 사이트로 변경한 라우터
 
-@event_router.get("/schedule/{artist_name}/{unit_id}")
-async def scrap_events(artist_name: str, unit_id: str):
 
+@event_router.get("/scrape/myloveidol")
+async def scrape_myloveidol_events(
+    locale: str = Query("ko", description="언어 설정"),
+    artist_name: str | None = Query(None, description="솔로: stage_name, 그룹: group_name")
+):
+    """
+    최애돌 JSON API 크롤링 → DB 저장
+    """
     try:
-        # 함수명 변경
-        events = get_artist_schedule(artist_name, unit_id)
-        return {"events": events}
+        events = fetch_myloveidol_json(locale=locale)
+
+        # artist_name 필터 적용
+        if artist_name:
+            events = [e for e in events if e["idol"]["name"] == artist_name]
+
+        # DB 저장 등 로직 추가 가능
+        return {
+            "source": "myloveidol.com",
+            "locale": locale,
+            "events": events,
+            "count": len(events)
+        }
     except Exception as e:
-        # 더 자세한 에러 정보 반환
         import traceback
         return {
             "error": str(e),
-            "traceback": traceback.format_exc()
+            "traceback": traceback.format_exc(),
+            "source": "myloveidol.com"
         }
+
+
+@event_router.post("/scrape/myloveidol/import")
+async def import_myloveidol_events(
+
+        locale: str = Query("ko", description="언어 설정"),
+        artist_name: str | None = Query(None, description="솔로: stage_name, 그룹: group_name"),
+        background_tasks: BackgroundTasks = None
+):
+    """MyLoveIdol에서 스케줄을 크롤링해서 DB에 저장"""
+    try:
+        events = fetch_myloveidol_json(locale=locale)
+
+        # artist_name 필터 적용
+        if artist_name:
+            events = [e for e in events if e["idol"]["name"] == artist_name]
+
+        # 크롤링
+        scraped_events = get_myloveidol_schedule(
+            locale=locale,
+
+            artist_name=artist_name
+        )
+
+        if not scraped_events:
+            return {
+                "message": "크롤링된 이벤트가 없습니다.",
+                "imported": 0,
+                "errors": []
+            }
+
+        # DB 저장 형식으로 변환
+        result = await EventService.import_scraped_events(scraped_events, "myloveidol")
+
+        # 성공한 이벤트에 대해 알림
+        if result.successful > 0 and background_tasks:
+            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
+            background_tasks.add_task(
+                notification_service.send_batch_notification,
+                recent_events,
+                "scraped_import"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"MyLoveIdol import error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Import error: {str(e)}"
+        )
+
+
+@event_router.get("/events/calendar/", response_model=list[EventOut])
+async def get_events(artist_name: str | None = Query(None)):
+    events, total = await EventCRUD.get_list()
+    if artist_name:
+        events = [e for e in events if e.artist_name == artist_name]
+    return events

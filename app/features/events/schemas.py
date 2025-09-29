@@ -62,3 +62,20 @@ class BulkEventCreate(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+class IdolInfo(BaseModel):
+    id: int
+    group_id: int | None = None
+    name: str
+    image_url: str | None = None
+
+
+class EventOut(BaseModel):
+    id: int
+    article_id: int | None = None
+    category: str | None = None
+    allday: bool | None = None
+    dtstart: datetime
+    extra: str | None = None
+    created_at: datetime
+    idol: IdolInfo
