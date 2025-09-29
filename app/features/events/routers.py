@@ -199,6 +199,27 @@ async def scrape_myloveidol_events(
     """
     최애돌 JSON API 크롤링 → DB 저장
     """
+     try:
+            events = fetch_myloveidol_json(locale=locale)
+    
+            # artist_name 필터 적용
+            if artist_name:
+                events = [e for e in events if e["idol"]["name"] == artist_name]
+    
+            # DB 저장 등 로직 추가 가능
+            return {
+                "source": "myloveidol.com",
+                "locale": locale,
+                "events": events,
+                "count": len(events)
+            }
+        except Exception as e:
+            import traceback
+            return {
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "source": "myloveidol.com"
+            }
 
 
 @event_router.post("/scrape/myloveidol/import")
