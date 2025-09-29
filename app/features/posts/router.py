@@ -56,16 +56,18 @@ async def get_posts(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     artist_id: int = Query(None, description="특정 아티스트의 포스트만 조회"),
-    is_active: bool = Query(None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"),
+    is_active: bool = Query(
+        None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
+    ),
 ):
     """포스트 목록 조회"""
     query = models.Post.all().prefetch_related("user", "artist")
 
     """구독중인 아티스트의 팬포스트 조회"""
     if is_active:
-        subscribed_artist_ids = await Subscription.filter(
-            is_active=True
-        ).values_list("artist_id", flat=True)
+        subscribed_artist_ids = await Subscription.filter(is_active=True).values_list(
+            "artist_id", flat=True
+        )
         query = query.filter(id__in=subscribed_artist_ids)
 
     if artist_id:

@@ -46,42 +46,42 @@ async def create_subscription(
     else:
         # 새로운 구독 생성 (직접 구독)
         await Subscription.create(
-            user=current_user, 
-            artist=artist,
-            subscription_type=SubscriptionType.DIRECT
+            user=current_user, artist=artist, subscription_type=SubscriptionType.DIRECT
         )
-        
+
         # 그룹을 구독한 경우, 같은 group_name을 가진 개별 멤버들도 자동 구독
         if artist.artist_type == ArtistType.GROUP and artist.group_name:
             # 같은 그룹명의 개별 멤버들 조회
             group_members = await Artist.filter(
                 group_name=artist.group_name,
                 artist_type=ArtistType.INDIVIDUAL,
-                is_active=True
+                is_active=True,
             )
-            
+
             # 각 멤버에 대해 상속 구독 생성
             for member in group_members:
                 # 이미 구독 중인지 확인
                 existing_member_sub = await Subscription.filter(
                     user=current_user, artist=member
                 ).first()
-                
+
                 if not existing_member_sub:
                     # 상속 구독 생성
                     await Subscription.create(
                         user=current_user,
                         artist=member,
-                        subscription_type=SubscriptionType.INHERITED
+                        subscription_type=SubscriptionType.INHERITED,
                     )
                 elif not existing_member_sub.is_active:
                     # 비활성 구독이 있으면 상속으로 활성화 (DIRECT였으면 유지)
                     existing_member_sub.is_active = True
                     if existing_member_sub.subscription_type != SubscriptionType.DIRECT:
-                        existing_member_sub.subscription_type = SubscriptionType.INHERITED
+                        existing_member_sub.subscription_type = (
+                            SubscriptionType.INHERITED
+                        )
                     await existing_member_sub.save()
                 # 이미 활성화된 구독이 있다면 (DIRECT든 INHERITED든) 건드리지 않음
-    
+
     return {"detail": "구독이 완료되었습니다."}
 
 
@@ -159,35 +159,37 @@ async def cancel_subscription(
     try:
         sub = await Subscription.get(id=subscription_id, user=current_user)
         artist = await sub.artist
-        
+
         # INHERITED 구독은 직접 취소 불가
         if sub.subscription_type == SubscriptionType.INHERITED:
             raise HTTPException(
-                status_code=400, 
-                detail="상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요."
+                status_code=400,
+                detail="상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요.",
             )
-        
+
         # 구독 취소
         sub.is_active = False
         await sub.save()
-        
+
         # 그룹 구독을 취소한 경우, 상속된 멤버 구독들도 취소
-        if (sub.subscription_type == SubscriptionType.DIRECT and 
-            artist.artist_type == ArtistType.GROUP and artist.group_name):
-            
+        if (
+            sub.subscription_type == SubscriptionType.DIRECT
+            and artist.artist_type == ArtistType.GROUP
+            and artist.group_name
+        ):
             # 같은 그룹의 개별 멤버들의 상속 구독 취소
             inherited_subscriptions = await Subscription.filter(
                 user=current_user,
                 subscription_type=SubscriptionType.INHERITED,
                 is_active=True,
                 artist__group_name=artist.group_name,
-                artist__artist_type=ArtistType.INDIVIDUAL
+                artist__artist_type=ArtistType.INDIVIDUAL,
             )
-            
+
             for inherited_sub in inherited_subscriptions:
                 inherited_sub.is_active = False
                 await inherited_sub.save()
-        
+
         return {"detail": "구독 취소 완료"}
     except DoesNotExist:
         raise HTTPException(status_code=404, detail="구독 정보가 없습니다.") from None

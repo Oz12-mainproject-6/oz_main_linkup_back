@@ -63,6 +63,7 @@ class BulkEventCreate(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+
 class IdolInfo(BaseModel):
     id: int
     group_id: int | None = None

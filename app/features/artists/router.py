@@ -40,7 +40,7 @@ async def get_idol_list(
     # 필터 적용
     if artist_type:
         query = query.filter(artist_type=artist_type)
-    
+
     # 구독 중인 아티스트만 필터링 (로그인된 사용자만)
     if is_active and current_user:
         subscribed_artist_ids = await Subscription.filter(

@@ -1,21 +1,18 @@
-import traceback
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
 
-
-from app.external.scrapping import get_myloveidol_schedule, fetch_myloveidol_json, parse_myloveidol_events
-from app.features.artists.models import Artist
-from app.features.events.services import EventCRUD, notification_service
-from app.features.events.models import EventCategory, EventVisibility, Events
+from app.external.scrapping import fetch_myloveidol_json, get_myloveidol_schedule
+from app.features.events.models import EventCategory, EventVisibility
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
+    EventOut,
     EventResponse,
-    FileUploadResponse, EventOut,
+    FileUploadResponse,
 )
 from app.features.events.services import EventCRUD, EventService, notification_service
 from app.features.notifications.models import Subscription
@@ -33,7 +30,10 @@ async def get_events(
     artist_id: int | None = Query(None, description="아티스트 id"),
     category: EventCategory | None = Query(None, description="일정 종류"),
     visibility: EventVisibility | None = Query(None, description="공개범위"),
-    is_active: bool | None = Query(None, description="구독 중인 아티스트의 이벤트만 조회 (true: 구독 중만, null: 전체)"),
+    is_active: bool | None = Query(
+        None,
+        description="구독 중인 아티스트의 이벤트만 조회 (true: 구독 중만, null: 전체)",
+    ),
     start_date: str | None = Query(None, description="YYYY-MM-DD format"),
     end_date: str | None = Query(None, description="YYYY-MM-DD format"),
     current_user: User | None = Depends(get_current_user),
@@ -109,10 +109,6 @@ async def bulk_create_events(
     )
 
 
-
-
-
-
 # ---------------------------
 # 특정 이벤트 다운로드
 # ---------------------------
@@ -186,48 +182,53 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
             status_code=400, detail=f"File processing error: {str(e)}"
         ) from e
 
-#author : Juwon
-#date : 2025-09-25
-#content : 최애돌 사이트를 크롤링 하는 사이트로 변경한 라우터
+
+# author : Juwon
+# date : 2025-09-25
+# content : 최애돌 사이트를 크롤링 하는 사이트로 변경한 라우터
 
 
 @event_router.get("/scrape/myloveidol")
 async def scrape_myloveidol_events(
     locale: str = Query("ko", description="언어 설정"),
-    artist_name: str | None = Query(None, description="솔로: stage_name, 그룹: group_name")
+    artist_name: str | None = Query(
+        None, description="솔로: stage_name, 그룹: group_name"
+    ),
 ):
     """
     최애돌 JSON API 크롤링 → DB 저장
     """
-     try:
-            events = fetch_myloveidol_json(locale=locale)
-    
-            # artist_name 필터 적용
-            if artist_name:
-                events = [e for e in events if e["idol"]["name"] == artist_name]
-    
-            # DB 저장 등 로직 추가 가능
-            return {
-                "source": "myloveidol.com",
-                "locale": locale,
-                "events": events,
-                "count": len(events)
-            }
-        except Exception as e:
-            import traceback
-            return {
-                "error": str(e),
-                "traceback": traceback.format_exc(),
-                "source": "myloveidol.com"
-            }
+    try:
+        events = fetch_myloveidol_json(locale=locale)
+
+        # artist_name 필터 적용
+        if artist_name:
+            events = [e for e in events if e["idol"]["name"] == artist_name]
+
+        # DB 저장 등 로직 추가 가능
+        return {
+            "source": "myloveidol.com",
+            "locale": locale,
+            "events": events,
+            "count": len(events),
+        }
+    except Exception as e:
+        import traceback
+
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "source": "myloveidol.com",
+        }
 
 
 @event_router.post("/scrape/myloveidol/import")
 async def import_myloveidol_events(
-
-        locale: str = Query("ko", description="언어 설정"),
-        artist_name: str | None = Query(None, description="솔로: stage_name, 그룹: group_name"),
-        background_tasks: BackgroundTasks = None
+    locale: str = Query("ko", description="언어 설정"),
+    artist_name: str | None = Query(
+        None, description="솔로: stage_name, 그룹: group_name"
+    ),
+    background_tasks: BackgroundTasks = None,
 ):
     """MyLoveIdol에서 스케줄을 크롤링해서 DB에 저장"""
     try:
@@ -238,17 +239,13 @@ async def import_myloveidol_events(
             events = [e for e in events if e["idol"]["name"] == artist_name]
 
         # 크롤링
-        scraped_events = get_myloveidol_schedule(
-            locale=locale,
-
-            artist_name=artist_name
-        )
+        scraped_events = get_myloveidol_schedule(locale=locale, artist_name=artist_name)
 
         if not scraped_events:
             return {
                 "message": "크롤링된 이벤트가 없습니다.",
                 "imported": 0,
-                "errors": []
+                "errors": [],
             }
 
         # DB 저장 형식으로 변환
@@ -260,27 +257,21 @@ async def import_myloveidol_events(
             background_tasks.add_task(
                 notification_service.send_batch_notification,
                 recent_events,
-                "scraped_import"
+                "scraped_import",
             )
 
         return result
 
     except Exception as e:
         logger.error(f"MyLoveIdol import error: {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Import error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Import error: {str(e)}") from e
 
 
 @event_router.get("/events/calendar/", response_model=list[EventOut])
-async def get_events(artist_name: str | None = Query(None)):
+async def calender_get_events(artist_name: str | None = Query(None)):
     events, total = await EventCRUD.get_list()
     if artist_name:
         events = [e for e in events if e.artist_name == artist_name]
     return events
 
-        # 더 자세한 에러 정보 반환
-
-        return {"error": str(e), "traceback": traceback.format_exc()}
-
+    # 더 자세한 에러 정보 반환

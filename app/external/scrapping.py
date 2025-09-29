@@ -1,17 +1,17 @@
 import json
+import re
+from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
-from typing import List, Dict
-import re
+
 # MyLoveIdol URL
 MYLOVEIDOL_BASE_URL = "https://www.myloveidol.com/api/v1/schedules/all_schedule/"
 
 
-def get_myloveidol_schedule(locale: str = "ko",
-                            date_filter: str | None = None,
-                            artist_name: str | None = None) -> List[Dict]:
+def get_myloveidol_schedule(
+    locale: str = "ko", date_filter: str | None = None, artist_name: str | None = None
+) -> list[dict]:
     """
     MyLoveIdol 스케줄 크롤링 및 필터링
     - locale: 'ko', 'en' 등
@@ -36,7 +36,7 @@ def get_myloveidol_schedule(locale: str = "ko",
             "date": event_date,
             "group_name": group_name,
             "stage_name": stage_name,
-            "title": title
+            "title": title,
         }
 
         events.append(event)
@@ -48,11 +48,13 @@ def get_myloveidol_schedule(locale: str = "ko",
     # 아티스트 필터 (솔로/그룹 모두 체크)
     if artist_name:
         events = [
-            e for e in events
+            e
+            for e in events
             if e.get("stage_name") == artist_name or e.get("group_name") == artist_name
         ]
 
     return events
+
 
 def extract_myloveidol_schedule_data(element):
     """HTML 요소에서 스케줄 데이터 추출"""
@@ -72,7 +74,7 @@ def extract_myloveidol_schedule_data(element):
                 "artist": artist,
                 "type": category or "기타",
                 "location": location,
-                "source": "myloveidol.com"
+                "source": "myloveidol.com",
             }
     except Exception as e:
         print(f"MyLoveIdol 요소 추출 오류: {e}")
@@ -81,11 +83,11 @@ def extract_myloveidol_schedule_data(element):
 
 def extract_myloveidol_date_info(element):
     """날짜 추출"""
-    for attr in ['data-date', 'datetime', 'data-start-date']:
+    for attr in ["data-date", "datetime", "data-start-date"]:
         if element.get(attr):
             return element.get(attr)
     text = element.get_text()
-    match = re.search(r'\d{4}-\d{2}-\d{2}', text)
+    match = re.search(r"\d{4}-\d{2}-\d{2}", text)
     if match:
         return match.group()
     return None
@@ -93,7 +95,7 @@ def extract_myloveidol_date_info(element):
 
 def extract_myloveidol_title_info(element):
     """제목 추출"""
-    selectors = ['.title', '.event-title', 'h1', 'h2', 'h3']
+    selectors = [".title", ".event-title", "h1", "h2", "h3"]
     for sel in selectors:
         e = element.select_one(sel)
         if e and e.get_text(strip=True):
@@ -103,20 +105,20 @@ def extract_myloveidol_title_info(element):
 
 def extract_myloveidol_artist_info(element):
     """아티스트 추출"""
-    selectors = ['.artist', '.performer', '[class*="artist"]']
+    selectors = [".artist", ".performer", '[class*="artist"]']
     for sel in selectors:
         e = element.select_one(sel)
         if e:
             return e.get_text(strip=True)
-    img = element.select_one('img')
-    if img and img.get('alt'):
-        return img.get('alt')
+    img = element.select_one("img")
+    if img and img.get("alt"):
+        return img.get("alt")
     return None
 
 
 def extract_myloveidol_category_info(element):
     """카테고리 추출"""
-    for attr in ['data-category', 'data-type', 'data-genre']:
+    for attr in ["data-category", "data-type", "data-genre"]:
         if element.get(attr):
             return element.get(attr)
     return None
@@ -125,7 +127,7 @@ def extract_myloveidol_category_info(element):
 def extract_myloveidol_time_info(element):
     """시간 추출"""
     text = element.get_text()
-    match = re.search(r'(\d{1,2}:\d{2})', text)
+    match = re.search(r"(\d{1,2}:\d{2})", text)
     if match:
         return match.group()
     return None
@@ -133,7 +135,7 @@ def extract_myloveidol_time_info(element):
 
 def extract_myloveidol_location_info(element):
     """장소 추출"""
-    selectors = ['.location', '.venue', '.place']
+    selectors = [".location", ".venue", ".place"]
     for sel in selectors:
         e = element.select_one(sel)
         if e:
@@ -144,16 +146,16 @@ def extract_myloveidol_location_info(element):
 def extract_myloveidol_json_schedules(soup):
     """스크립트 안 JSON 데이터 추출"""
     schedules = []
-    scripts = soup.find_all('script')
+    scripts = soup.find_all("script")
     for script in scripts:
         if not script.string:
             continue
-        matches = re.findall(r'schedules?\s*[:=]\s*(\[.*?\])', script.string, re.DOTALL)
+        matches = re.findall(r"schedules?\s*[:=]\s*(\[.*?\])", script.string, re.DOTALL)
         for m in matches:
             try:
                 data = json.loads(m)
                 schedules.extend(parse_myloveidol_json_schedules(data))
-            except:
+            except Exception:
                 continue
     return schedules
 
@@ -164,22 +166,24 @@ def parse_myloveidol_json_schedules(data):
     if isinstance(data, list):
         for item in data:
             if isinstance(item, dict):
-                schedules.append({
-                    "date": item.get('date'),
-                    "time": item.get('time'),
-                    "title": item.get('title'),
-                    "artist": item.get('artist'),
-                    "type": item.get('category') or "기타",
-                    "location": item.get('location'),
-                    "source": "myloveidol.com"
-                })
+                schedules.append(
+                    {
+                        "date": item.get("date"),
+                        "time": item.get("time"),
+                        "title": item.get("title"),
+                        "artist": item.get("artist"),
+                        "type": item.get("category") or "기타",
+                        "location": item.get("location"),
+                        "source": "myloveidol.com",
+                    }
+                )
     return schedules
 
 
 def detect_and_call_myloveidol_api(soup, headers):
     """페이지에서 API 호출 URL 찾아서 JSON 추출"""
     schedules = []
-    scripts = soup.find_all('script')
+    scripts = soup.find_all("script")
     for script in scripts:
         if not script.string:
             continue
@@ -190,7 +194,7 @@ def detect_and_call_myloveidol_api(soup, headers):
                 res = requests.get(api_url, headers=headers, timeout=5)
                 if res.status_code == 200:
                     schedules.extend(parse_myloveidol_json_schedules(res.json()))
-            except:
+            except Exception:
                 continue
     return schedules
 
@@ -211,14 +215,16 @@ def convert_to_calendar_events(schedules):
     """캘린더용 이벤트 변환"""
     events = []
     for s in schedules:
-        start = s['date']
-        if s.get('time'):
+        start = s["date"]
+        if s.get("time"):
             start += f"T{s['time']}"
-        events.append({
-            "title": f"{s.get('title', '')} - {s.get('artist', '')}",
-            "start": start,
-            "allDay": not bool(s.get('time'))
-        })
+        events.append(
+            {
+                "title": f"{s.get('title', '')} - {s.get('artist', '')}",
+                "start": start,
+                "allDay": not bool(s.get("time")),
+            }
+        )
     return events
 
 
@@ -228,25 +234,19 @@ if __name__ == "__main__":
     print(json.dumps(events, ensure_ascii=False, indent=2))
 
 
-def fetch_myloveidol_json(locale: str = "ko", limit: int = 1000) -> List[Dict]:
+def fetch_myloveidol_json(locale: str = "ko", limit: int = 1000) -> list[dict]:
     """
     최애돌 API에서 일정 JSON 데이터 가져오기
     """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
     }
     response = requests.get(MYLOVEIDOL_BASE_URL, headers=headers)
     data = response.json()
-    events = data["objects"]
-    params = {
-        "locale": locale,
-        "limit": limit
-    }
+    params = {"locale": locale, "limit": limit}
 
     response = requests.get(MYLOVEIDOL_BASE_URL, params=params)
-    print(response.status_code)
-    print(response.text[:500])  # 응답 확인
     response.raise_for_status()
     data = response.json()
 
@@ -256,7 +256,9 @@ def fetch_myloveidol_json(locale: str = "ko", limit: int = 1000) -> List[Dict]:
     return data.get("objects", [])
 
 
-def parse_myloveidol_events(json_objects: List[Dict], artist_filter: str | None = None) -> List[Dict]:
+def parse_myloveidol_events(
+    json_objects: list[dict], artist_filter: str | None = None
+) -> list[dict]:
     """
     JSON 데이터를 DB/캘린더용 이벤트 리스트로 변환
     """
@@ -269,10 +271,7 @@ def parse_myloveidol_events(json_objects: List[Dict], artist_filter: str | None 
 
         # 솔로/그룹 필터링
         if artist_filter:
-            events = [
-                e for e in events
-                if e["idol"]["name"] == artist_filter
-            ]
+            events = [e for e in events if e["idol"]["name"] == artist_filter]
             if artist_filter != artist_name:
                 continue
 
@@ -292,21 +291,23 @@ def parse_myloveidol_events(json_objects: List[Dict], artist_filter: str | None 
             "location": obj.get("location"),
             "extra": obj.get("extra"),
             "article_id": obj.get("article_id"),
-            "source": "myloveidol.com"
+            "source": "myloveidol.com",
         }
         events.append(event)
 
     return events
 
 
-def convert_to_calendar_events(events: List[Dict]) -> List[Dict]:
+def convert_to_calendar_events(events: list[dict]) -> list[dict]:
     """캘린더용 이벤트 변환"""
     calendar_events = []
     for e in events:
         start = e["start_time"].isoformat() if e.get("start_time") else None
-        calendar_events.append({
-            "title": f"{e.get('title', '')} - {e.get('artist_name', '')}",
-            "start": start,
-            "allDay": e.get("allday", True)
-        })
+        calendar_events.append(
+            {
+                "title": f"{e.get('title', '')} - {e.get('artist_name', '')}",
+                "start": start,
+                "allDay": e.get("allday", True),
+            }
+        )
     return calendar_events

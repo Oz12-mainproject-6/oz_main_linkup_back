@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+
 from app.features.notifications.models import SubscriptionType
 
 

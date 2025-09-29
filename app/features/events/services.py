@@ -1,26 +1,15 @@
 import asyncio
-
-import re
-from typing import BinaryIO
-from typing import Any
-
 import io
+import re
 from datetime import datetime, timedelta
 from typing import Any, BinaryIO
 
 import httpx
 import pandas as pd
-
 from fastapi import HTTPException, UploadFile
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
-
-
-from app.features.events.schemas import FileUploadResponse
-from datetime import datetime, timedelta
-
-
 from tortoise.exceptions import DoesNotExist
 
 from app.features.artists.models import Artist
@@ -175,9 +164,10 @@ class EventCRUD:
 class EventService:
     """이벤트 비즈니스 로직 서비스"""
 
-
     @staticmethod
-    async def process_upload_file_for_artist(file: UploadFile, artist_id: int) -> FileUploadResponse:
+    async def process_upload_file_for_artist(
+        file: UploadFile, artist_id: int
+    ) -> FileUploadResponse:
         """특정 아티스트를 위한 파일 업로드 처리 - title, description, start_time, end_time, location만 처리"""
         try:
             contents = await file.read()
@@ -199,7 +189,7 @@ class EventService:
             try:
                 await Artist.get(id=artist_id)
             except DoesNotExist:
-                raise ValueError(f"Artist with ID {artist_id} not found")
+                raise ValueError(f"Artist with ID {artist_id} not found") from None
 
             # 데이터 변환 및 검증
             events_data = []
@@ -275,7 +265,7 @@ class EventService:
         # 아티스트용 간소화된 헤더 (artist_id, category, visibility 제외)
         headers = [
             "title",
-            "description", 
+            "description",
             "start_time",
             "end_time",
             "location",
@@ -295,7 +285,7 @@ class EventService:
             [
                 "start_time",
                 "시작 시간 (YYYY-MM-DD HH:MM:SS)",
-                "Yes", 
+                "Yes",
                 "2024-12-25 19:00:00",
             ],
             [
@@ -318,7 +308,7 @@ class EventService:
         sample_data = [
             [
                 "Sample Concert",
-                "Sample Description", 
+                "Sample Description",
                 "2024-12-25 19:00:00",
                 "2024-12-25 22:00:00",
                 "Seoul Olympic Park",
@@ -326,7 +316,7 @@ class EventService:
             [
                 "Fan Meeting",
                 "Meet & Greet Event",
-                "2024-12-30 15:00:00", 
+                "2024-12-30 15:00:00",
                 "2024-12-30 17:00:00",
                 "Coex Hall",
             ],
@@ -779,8 +769,11 @@ notification_service = NotificationService()
 # date : 2025.09.25
 # content : 크롤링 관련 메서드들 추가
 
+
 @staticmethod
-async def import_scraped_events(scraped_events: list[dict], source: str) -> FileUploadResponse:
+async def import_scraped_events(
+    scraped_events: list[dict], source: str
+) -> FileUploadResponse:
     """크롤링된 이벤트를 DB에 저장"""
     try:
         events_data = []
@@ -790,17 +783,15 @@ async def import_scraped_events(scraped_events: list[dict], source: str) -> File
             try:
                 # 날짜 파싱
                 start_time = EventService._parse_scraped_date(
-                    event.get('date'),
-                    event.get('time')
+                    event.get("date"), event.get("time")
                 )
 
                 # 카테고리 매핑
-                category = EventService._map_scraped_category(event.get('type', ''))
+                category = EventService._map_scraped_category(event.get("type", ""))
 
                 # 아티스트 ID 찾기 또는 생성
                 artist_id = await EventService._get_or_create_artist_for_scraped_event(
-                    event.get('artist'),
-                    source
+                    event.get("artist"), source
                 )
 
                 if not artist_id:
@@ -809,18 +800,21 @@ async def import_scraped_events(scraped_events: list[dict], source: str) -> File
 
                 event_data = {
                     "artist_id": artist_id,
-                    "title": event.get('title', '').strip()[:200],  # 길이 제한
-                    "description": f"Source: {source}\n" + (event.get('description') or ''),
+                    "title": event.get("title", "").strip()[:200],  # 길이 제한
+                    "description": f"Source: {source}\n"
+                    + (event.get("description") or ""),
                     "start_time": start_time,
                     "end_time": None,  # 크롤링 데이터에는 종료시간이 없는 경우가 많음
-                    "location": (event.get('location') or '')[:200] if event.get('location') else None,
+                    "location": (event.get("location") or "")[:200]
+                    if event.get("location")
+                    else None,
                     "category": category,
                     "visibility": EventVisibility.PUBLIC,
                 }
 
                 # 중복 체크
                 if not await EventService._is_duplicate_event(
-                        artist_id, event_data['title'], start_time
+                    artist_id, event_data["title"], start_time
                 ):
                     events_data.append(event_data)
                 else:
@@ -833,22 +827,23 @@ async def import_scraped_events(scraped_events: list[dict], source: str) -> File
         created_count, creation_errors = await EventCRUD.bulk_create(events_data)
         all_errors = errors + creation_errors
 
-        logger.info(f"Scraped events import: {created_count}/{len(scraped_events)} created from {source}")
+        logger.info(
+            f"Scraped events import: {created_count}/{len(scraped_events)} created from {source}"
+        )
 
         return FileUploadResponse(
             message=f"Scraped events from {source} processed",
             total_processed=len(scraped_events),
             successful=created_count,
             failed=len(scraped_events) - created_count,
-            errors=all_errors[:10]
+            errors=all_errors[:10],
         )
 
     except Exception as e:
         logger.error(f"Scraped events import error: {str(e)}")
         raise HTTPException(
-            status_code=400,
-            detail=f"Import processing error: {str(e)}"
-        )
+            status_code=400, detail=f"Import processing error: {str(e)}"
+        ) from e
 
 
 @staticmethod
@@ -859,11 +854,11 @@ def _parse_scraped_date(date_str: str, time_str: str = None) -> datetime:
 
     try:
         # 다양한 날짜 형식 처리
-        if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
-            base_date = datetime.strptime(date_str[:10], '%Y-%m-%d')
-        elif re.match(r'\d{1,2}월\s*\d{1,2}일', date_str):
+        if re.match(r"\d{4}-\d{2}-\d{2}", date_str):
+            base_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
+        elif re.match(r"\d{1,2}월\s*\d{1,2}일", date_str):
             # "12월 25일" 형태
-            month_day = re.search(r'(\d{1,2})월\s*(\d{1,2})일', date_str)
+            month_day = re.search(r"(\d{1,2})월\s*(\d{1,2})일", date_str)
             if month_day:
                 month, day = month_day.groups()
                 current_year = datetime.now().year
@@ -875,7 +870,7 @@ def _parse_scraped_date(date_str: str, time_str: str = None) -> datetime:
 
         # 시간 정보 추가
         if time_str:
-            time_match = re.search(r'(\d{1,2}):(\d{2})', time_str)
+            time_match = re.search(r"(\d{1,2}):(\d{2})", time_str)
             if time_match:
                 hour, minute = time_match.groups()
                 base_date = base_date.replace(hour=int(hour), minute=int(minute))
@@ -896,22 +891,22 @@ def _map_scraped_category(type_str: str) -> EventCategory:
     type_lower = type_str.lower()
 
     mapping = {
-        'concert': EventCategory.CONCERT,
-        '콘서트': EventCategory.CONCERT,
-        'fanmeeting': EventCategory.FANMEETING,
-        '팬미팅': EventCategory.FANMEETING,
-        'showcase': EventCategory.SHOWCASE,
-        '쇼케이스': EventCategory.SHOWCASE,
-        'broadcast': EventCategory.BROADCAST,
-        '방송': EventCategory.BROADCAST,
-        'variety': EventCategory.VARIETY,
-        '예능': EventCategory.VARIETY,
-        'music': EventCategory.MUSIC,
-        '음악': EventCategory.MUSIC,
-        'release': EventCategory.RELEASE,
-        '발매': EventCategory.RELEASE,
-        'comeback': EventCategory.COMEBACK,
-        '컴백': EventCategory.COMEBACK
+        "concert": EventCategory.CONCERT,
+        "콘서트": EventCategory.CONCERT,
+        "fanmeeting": EventCategory.FANMEETING,
+        "팬미팅": EventCategory.FANMEETING,
+        "showcase": EventCategory.SHOWCASE,
+        "쇼케이스": EventCategory.SHOWCASE,
+        "broadcast": EventCategory.BROADCAST,
+        "방송": EventCategory.BROADCAST,
+        "variety": EventCategory.VARIETY,
+        "예능": EventCategory.VARIETY,
+        "music": EventCategory.MUSIC,
+        "음악": EventCategory.MUSIC,
+        "release": EventCategory.RELEASE,
+        "발매": EventCategory.RELEASE,
+        "comeback": EventCategory.COMEBACK,
+        "컴백": EventCategory.COMEBACK,
     }
 
     for key, value in mapping.items():
@@ -922,7 +917,9 @@ def _map_scraped_category(type_str: str) -> EventCategory:
 
 
 @staticmethod
-async def _get_or_create_artist_for_scraped_event(artist_name: str, source: str) -> int | None:
+async def _get_or_create_artist_for_scraped_event(
+    artist_name: str, source: str
+) -> int | None:
     """크롤링된 이벤트의 아티스트 ID 찾기 또는 생성"""
     if not artist_name:
         return 1  # 기본 아티스트 ID
@@ -958,7 +955,7 @@ async def _is_duplicate_event(artist_id: int, title: str, start_time: datetime) 
             title=title,
             start_time__gte=start_date,
             start_time__lte=end_date,
-            is_active=True
+            is_active=True,
         ).first()
 
         return existing is not None
@@ -966,6 +963,7 @@ async def _is_duplicate_event(artist_id: int, title: str, start_time: datetime) 
     except Exception as e:
         logger.error(f"Error checking duplicate event: {str(e)}")
         return False
+
 
 # date : 2025.09.23
 # content : notification.py를 services.py로 이동
@@ -981,4 +979,3 @@ async def import_artist_events(artist_name: str, unit_id: str):
             visibility="public",
         )
     return schedules
-

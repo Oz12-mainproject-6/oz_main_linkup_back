@@ -317,7 +317,8 @@ class CompanyService:
             )
         if not group_name:
             artist_type = ArtistType.INDIVIDUAL
-        else : artist_type = ArtistType.GROUP
+        else:
+            artist_type = ArtistType.GROUP
 
         # 1. Artist 생성
         artist = await Artist.create(
@@ -467,7 +468,7 @@ class CompanyService:
         # stage_name 또는 group_name 중 하나는 필수 (업데이트 후 기준)
         final_stage_name = stage_name if stage_name is not None else artist.stage_name
         final_group_name = group_name if group_name is not None else artist.group_name
-        
+
         if not final_stage_name and not final_group_name:
             raise HTTPException(
                 status_code=400,
@@ -489,7 +490,9 @@ class CompanyService:
         await artist.save()
 
         # 이미지 업데이트 헬퍼 함수 (파일 업로드 방식)
-        async def update_image(image_type: ImageType, new_image: UploadFile | None, folder: str):
+        async def update_image(
+            image_type: ImageType, new_image: UploadFile | None, folder: str
+        ):
             if new_image and new_image.filename:
                 # 기존 이미지 삭제
                 existing_image = await SharedImage.filter(
