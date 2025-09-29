@@ -22,6 +22,9 @@ async def get_idol_list(
     artist_type: str | None = Query(
         None, description="아티스트 타입 필터 (group/individual)"
     ),
+    artist_name: str | None = Query(
+        None, description="아티스트 이름 필터 (group_name/stage_name)"
+    ),
     is_active: bool | None = Query(
         None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
     ),
@@ -40,6 +43,12 @@ async def get_idol_list(
     # 필터 적용
     if artist_type:
         query = query.filter(artist_type=artist_type)
+
+    if artist_name:
+        query = query.filter(
+            models.Q(stage_name__icontains=artist_name)
+            | models.Q(group_name__icontains=artist_name)
+        )
 
     # 구독 중인 아티스트만 필터링 (로그인된 사용자만)
     if is_active and current_user:
