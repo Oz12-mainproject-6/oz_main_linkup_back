@@ -290,3 +290,8 @@ pyrightconfig.json
 
 #윈도우 환경 때문에 추가
 .dockerignore
+Dockerfile
+docker-compose.yml
+pyproject.toml
+.env.example
+scripts

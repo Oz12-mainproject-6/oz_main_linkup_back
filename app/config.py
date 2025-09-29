@@ -9,58 +9,42 @@ load_dotenv()
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_DEVELOPMENT = ENVIRONMENT == "development"
 IS_PRODUCTION = ENVIRONMENT == "production"
-IS_DOCKER = os.getenv("DOCKER", "false").lower() == "true"
 
 
-# Database configuration based on environment
+# Database configuration - 간소화된 버전
 def get_database_config() -> dict[str, Any]:
     """환경에 따른 데이터베이스 설정 반환"""
 
-    # DATABASE_URL이 있다면 우선 사용 (프로덕션 배포용)
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return database_url
+    # DB 연결 정보
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = int(os.getenv("DB_PORT", "5432"))
+    db_user = os.getenv("DB_USER", "linkup")
+    db_password = os.getenv("DB_PASSWORD", "linkup")
+    db_name = os.getenv("DB_NAME", "linkup")
 
-    # 개발 환경별 설정
-    if IS_DOCKER:
-        # Docker Compose 환경
-        return {
-            "engine": "tortoise.backends.asyncpg",
-            "credentials": {
-                "host": os.getenv("DB_HOST", "db"),  # Docker service name
-                "port": int(os.getenv("DB_PORT", "5432")),
-                "user": os.getenv("DB_USER", "linkup"),
-                "password": os.getenv("DB_PASSWORD", "linkup"),
-                "database": os.getenv("DB_NAME", "linkup"),
-            },
-        }
-    elif IS_DEVELOPMENT:
-        # 로컬 개발 환경
-        return {
-            "engine": "tortoise.backends.asyncpg",
-            "credentials": {
-                "host": os.getenv("DB_HOST", "localhost"),
-                "port": int(os.getenv("DB_PORT", "5432")),
-                "user": os.getenv("DB_USER", "linkup"),
-                "password": os.getenv("DB_PASSWORD", "linkup"),
-                "database": os.getenv("DB_NAME", "linkup"),
-            },
-        }
-    else:
-        # 프로덕션 환경 - 보다 엄격한 설정
-        return {
-            "engine": "tortoise.backends.asyncpg",
-            "credentials": {
-                "host": os.getenv("DB_HOST"),
-                "port": int(os.getenv("DB_PORT", "5432")),
-                "user": os.getenv("DB_USER"),
-                "password": os.getenv("DB_PASSWORD"),
-                "database": os.getenv("DB_NAME"),
-                "ssl": "require" if IS_PRODUCTION else None,
+    # 기본 설정
+    config = {
+        "engine": "tortoise.backends.asyncpg",
+        "credentials": {
+            "host": db_host,
+            "port": db_port,
+            "user": db_user,
+            "password": db_password,
+            "database": db_name,
+        },
+    }
+
+    # 프로덕션 환경에서는 추가 설정 (Docker 환경 제외)
+    if IS_PRODUCTION and db_host != "db":  # Docker 내부 db 호스트가 아닌 경우만
+        config["credentials"].update(
+            {
+                "ssl": "require",
                 "maxsize": int(os.getenv("DB_POOL_SIZE", "20")),
                 "minsize": int(os.getenv("DB_POOL_MIN_SIZE", "5")),
-            },
-        }
+            }
+        )
+
+    return config
 
 
 # Tortoise ORM 설정
@@ -76,7 +60,6 @@ TORTOISE_ORM = {
                 "app.features.posts.models",
                 "app.features.images.models",
                 "app.features.notifications.models",
-                "app.features.subscriptions.models",
             ],
             "default_connection": "default",
         }
@@ -107,6 +90,5 @@ DEBUG = IS_DEVELOPMENT
 # 설정 요약 출력
 if IS_DEVELOPMENT:
     print(f"🌍 Environment: {ENVIRONMENT}")
-    print(f"🐳 Docker: {IS_DOCKER}")
-    print(f"📊 Database: {type(get_database_config()).__name__}")
+    print(f"📊 Database Host: {os.getenv('DB_HOST', 'localhost')}")
     print(f"🔐 Debug: {DEBUG}")

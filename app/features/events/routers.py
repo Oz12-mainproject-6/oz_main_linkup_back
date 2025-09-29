@@ -1,22 +1,26 @@
+import traceback
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
+
 
 from app.external.scrapping import get_myloveidol_schedule, fetch_myloveidol_json, parse_myloveidol_events
 from app.features.artists.models import Artist
 from app.features.events.services import EventCRUD, notification_service
 from app.features.events.models import EventCategory, EventVisibility, Events
-
 from app.features.events.schemas import (
     BulkEventCreate,
     EventListResponse,
     EventResponse,
     FileUploadResponse, EventOut,
 )
-from app.features.events.services import EventService
+from app.features.events.services import EventCRUD, EventService, notification_service
+from app.features.notifications.models import Subscription
+from app.features.users.dependencies import get_current_user
+from app.features.users.models import User
 
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -29,9 +33,10 @@ async def get_events(
     artist_id: int | None = Query(None, description="아티스트 id"),
     category: EventCategory | None = Query(None, description="일정 종류"),
     visibility: EventVisibility | None = Query(None, description="공개범위"),
-    is_active: bool = Query(True, description="활동여부"),
+    is_active: bool | None = Query(None, description="구독 중인 아티스트의 이벤트만 조회 (true: 구독 중만, null: 전체)"),
     start_date: str | None = Query(None, description="YYYY-MM-DD format"),
     end_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    current_user: User | None = Depends(get_current_user),
 ):
     """이벤트 목록 조회"""
     try:
@@ -43,6 +48,13 @@ async def get_events(
             status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
         ) from err
 
+    # 구독 중인 아티스트 필터링
+    subscribed_artist_ids = None
+    if is_active and current_user:
+        subscribed_artist_ids = await Subscription.filter(
+            user=current_user, is_active=True
+        ).values_list("artist_id", flat=True)
+
     events, total = await EventCRUD.get_list(
         skip=skip,
         limit=limit,
@@ -50,9 +62,10 @@ async def get_events(
         artist_id=artist_id,
         category=category,
         visibility=visibility,
-        is_active=is_active,
+        is_active=True,  # 활성 이벤트만 조회 (기본값)
         start_date=start_dt,
         end_date=end_dt,
+        subscribed_artist_ids=subscribed_artist_ids,  # 구독 필터링 추가
     )
 
     return EventListResponse(
@@ -96,68 +109,8 @@ async def bulk_create_events(
     )
 
 
-@event_router.post("/file/upload", response_model=FileUploadResponse)
-async def upload_events_file(
-    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
-):
-    """파일 업로드"""
-
-    if not file.filename.endswith((".xlsx", ".csv")):
-        raise HTTPException(
-            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
-        )
-
-    try:
-        result = await EventService.process_upload_file(file)
-
-        if result.successful > 0 and background_tasks:
-            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
-            background_tasks.add_task(
-                notification_service.send_batch_notification,
-                recent_events,
-                "file_upload",
-            )
-
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
 
 
-@event_router.post("/file/upload-all", response_model=FileUploadResponse)
-async def upload_and_create_bulk_events(
-    file: UploadFile = File(...), background_tasks: BackgroundTasks = None
-):
-    """
-    파일 업로드 후 일괄 이벤트 생성
-    - Excel(.xlsx) 또는 CSV(.csv) 지원
-    - 성공한 이벤트에 대해 알림 전송
-    """
-    if not file.filename.endswith((".xlsx", ".csv")):
-        raise HTTPException(
-            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
-        )
-
-    try:
-        # EventService에서 처리 결과 반환
-        result = await EventService.process_upload_file(file)
-
-        # 알림 전송
-        if getattr(result, "successful", 0) > 0 and background_tasks:
-            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
-            background_tasks.add_task(
-                notification_service.send_batch_notification,
-                recent_events,
-                "file_upload_bulk",
-            )
-
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
 
 
 # ---------------------------
@@ -246,27 +199,6 @@ async def scrape_myloveidol_events(
     """
     최애돌 JSON API 크롤링 → DB 저장
     """
-    try:
-        events = fetch_myloveidol_json(locale=locale)
-
-        # artist_name 필터 적용
-        if artist_name:
-            events = [e for e in events if e["idol"]["name"] == artist_name]
-
-        # DB 저장 등 로직 추가 가능
-        return {
-            "source": "myloveidol.com",
-            "locale": locale,
-            "events": events,
-            "count": len(events)
-        }
-    except Exception as e:
-        import traceback
-        return {
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "source": "myloveidol.com"
-        }
 
 
 @event_router.post("/scrape/myloveidol/import")
@@ -326,3 +258,8 @@ async def get_events(artist_name: str | None = Query(None)):
     if artist_name:
         events = [e for e in events if e.artist_name == artist_name]
     return events
+
+        # 더 자세한 에러 정보 반환
+
+        return {"error": str(e), "traceback": traceback.format_exc()}
+

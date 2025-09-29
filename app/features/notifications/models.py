@@ -23,6 +23,13 @@ class EntityType(str, Enum):
     ARTIST = "Artist"
 
 
+class SubscriptionType(str, Enum):
+    """구독 타입"""
+
+    DIRECT = "direct"  # 직접 구독
+    INHERITED = "inherited"  # 그룹 구독으로 인한 상속 구독
+
+
 class Notifications(TimestampMixin):
     """알림 모델"""
 
@@ -63,6 +70,12 @@ class Subscription(TimestampMixin):
         "models.Artist",
         related_name="subscribers",
         description="아티스트",
+    )
+    is_active = fields.BooleanField(default=True, description="구독 상태")
+    subscription_type = fields.CharEnumField(
+        SubscriptionType,
+        default=SubscriptionType.DIRECT,
+        description="구독 타입 (직접/상속)",
     )
 
     class Meta:

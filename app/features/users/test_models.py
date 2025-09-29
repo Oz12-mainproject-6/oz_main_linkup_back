@@ -65,8 +65,8 @@ class TestUserModel:
         assert user.user_type == UserType.FAN  # default
         assert user.push_notification_enabled is True
         assert user.in_app_notification_enabled is True
-        assert user.phone_number is None
         assert user.nickname is None
+        assert user.profile_image_url is None
         assert user.oauth_provider is None
         assert user.oauth_id is None
 

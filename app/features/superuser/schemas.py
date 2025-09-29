@@ -9,7 +9,6 @@ class UserDetailResponse(BaseModel):
     id: int
     email: str
     nickname: str | None
-    phone_number: str | None
     user_type: UserType
     oauth_provider: str | None
     is_email_verified: bool

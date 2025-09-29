@@ -41,7 +41,6 @@ async def get_users(
             id=user.id,
             email=user.email,
             nickname=user.nickname,
-            phone_number=user.phone_number,
             user_type=user.user_type,
             oauth_provider=user.oauth_provider,
             is_email_verified=user.is_email_verified,
@@ -153,7 +152,8 @@ async def ban_user(
             detail="이미 차단된 사용자입니다.",
         )
 
-    # 사용자 타입을 BAN으로 변경
+    # 원래 타입을 저장하고 BAN으로 변경
+    user.original_user_type = user.user_type
     user.user_type = UserType.BAN
     await user.save()
 
@@ -167,12 +167,9 @@ async def ban_user(
 @superuser_router.post("/users/{user_id}/unban")
 async def unban_user(
     user_id: int,
-    new_user_type: UserType = Query(
-        UserType.FAN, description="해제 후 설정할 사용자 타입"
-    ),
     current_user: User = Depends(get_superuser),
 ):
-    """사용자 차단 해제"""
+    """사용자 차단 해제 (원래 타입으로 복원)"""
     user = await User.get_or_none(id=user_id)
     if not user:
         raise HTTPException(
@@ -186,19 +183,15 @@ async def unban_user(
             detail="차단되지 않은 사용자입니다.",
         )
 
-    if new_user_type == UserType.BAN:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="BAN 타입으로는 변경할 수 없습니다.",
-        )
-
-    # 사용자 타입을 새로운 타입으로 변경
-    user.user_type = new_user_type
+    # 원래 타입으로 복원 (기본값: FAN)
+    original_type = user.original_user_type or UserType.FAN
+    user.user_type = original_type
+    user.original_user_type = None
     await user.save()
 
     return {
         "user_id": user.id,
-        "message": f"사용자 차단이 해제되었습니다. 새로운 타입: {new_user_type}",
+        "message": f"사용자 차단이 해제되었습니다. 복원된 타입: {original_type}",
         "unbanned_at": datetime.now(),
-        "new_user_type": new_user_type,
+        "restored_user_type": original_type,
     }

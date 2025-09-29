@@ -31,7 +31,10 @@ class ArtistListResponse(BaseModel):
 
     id: int
     name: str  # 표시용 이름 (stage_name 또는 group_name)
-    profile_image: str | None = None  # 프로필 이미지 URL
+    profile_image: str | None = None  # 프로필 이미지 URL (호환성을 위해 유지)
+    face_url: str | None = None  # Face 이미지 URL
+    torso_url: str | None = None  # Torso 이미지 URL
+    banner_url: str | None = None  # Banner 이미지 URL
 
 
 class ArtistSubscriptionInfo(BaseModel):

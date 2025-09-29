@@ -1,6 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
+from app.core.s3 import S3Folders, s3_handler
 from app.features.artists.models import Artist
+from app.features.notifications.models import Subscription
 from app.features.posts import models, schemas
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
@@ -9,40 +20,35 @@ posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
 
 # ----------------- Post CRUD -----------------
-@posts_router.post("/", response_model=schemas.PostResponse)
+@posts_router.post("/")
 async def create_post(
-    post_in: schemas.PostCreate, current_user: User = Depends(get_current_user)
+    artist_id: int = Form(...),
+    post_content: str = Form(...),
+    post_image: UploadFile | None = File(None),
+    current_user: User = Depends(get_current_user),
 ):
     """포스트 생성"""
     # 아티스트 존재 확인
-    artist = await Artist.get_or_none(id=post_in.artist_id)
+    artist = await Artist.get_or_none(id=artist_id)
     if not artist:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Artist not found"
-        )
+        raise HTTPException(status_code=404, detail="Artist not found")
+
+    # S3에 이미지 업로드
+    image_url = None
+    if post_image and post_image.filename:  # 파일명이 있는 경우에만 업로드 (체크 강화)
+        image_url = await s3_handler.upload_file(post_image, S3Folders.POST)
+        if not image_url:
+            raise HTTPException(status_code=500, detail="Image upload failed")
 
     # 포스트 생성
     post = await models.Post.create(
         user=current_user,
         artist=artist,
-        content=post_in.post_content,
+        content=post_content,
+        image_url=image_url,
     )
-    await post.fetch_related("user", "artist")
 
-    # 좋아요 수 계산
-    likes_count = await models.Like.filter(post=post).count()
-
-    return schemas.PostResponse(
-        id=post.id,
-        content=post.content,
-        user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
-        artist=schemas.ArtistResponse(
-            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
-        ),
-        likes_count=likes_count,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-    )
+    return {"detail": "포스트가 성공적으로 생성되었습니다.", "post_id": post.id}
 
 
 @posts_router.get("/", response_model=list[schemas.PostResponse])
@@ -50,9 +56,17 @@ async def get_posts(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     artist_id: int = Query(None, description="특정 아티스트의 포스트만 조회"),
+    is_active: bool = Query(None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"),
 ):
     """포스트 목록 조회"""
     query = models.Post.all().prefetch_related("user", "artist")
+
+    """구독중인 아티스트의 팬포스트 조회"""
+    if is_active:
+        subscribed_artist_ids = await Subscription.filter(
+            is_active=True
+        ).values_list("artist_id", flat=True)
+        query = query.filter(id__in=subscribed_artist_ids)
 
     if artist_id:
         query = query.filter(artist_id=artist_id)
@@ -62,16 +76,19 @@ async def get_posts(
     result = []
     for post in posts:
         likes_count = await models.Like.filter(post=post).count()
+        comments_count = await models.Comment.filter(post=post).count()
         result.append(
             schemas.PostResponse(
                 id=post.id,
                 content=post.content,
+                image_url=post.image_url,
                 user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
                 artist=schemas.ArtistResponse(
                     id=post.artist.id,
                     name=post.artist.stage_name or post.artist.group_name,
                 ),
                 likes_count=likes_count,
+                comments_count=comments_count,
                 created_at=post.created_at,
                 updated_at=post.updated_at,
             )
@@ -88,9 +105,7 @@ async def get_post(post_id: int):
     )
 
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise HTTPException(status_code=404, detail="Post not found")
 
     # 좋아요 수 계산
     likes_count = await models.Like.filter(post=post).count()
@@ -118,6 +133,7 @@ async def get_post(post_id: int):
     return schemas.PostDetailResponse(
         id=post.id,
         content=post.content,
+        image_url=post.image_url,
         user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
         artist=schemas.ArtistResponse(
             id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
@@ -132,39 +148,38 @@ async def get_post(post_id: int):
 @posts_router.put("/{post_id}", response_model=schemas.PostResponse)
 async def update_post(
     post_id: int,
-    post_in: schemas.PostUpdate,
+    post_content: str = Form(...),
     current_user: User = Depends(get_current_user),
 ):
     """포스트 수정"""
     post = (
         await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
     )
-
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise HTTPException(status_code=404, detail="Post not found")
 
     if post.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     # 포스트 내용 업데이트
-    post.content = post_in.post_content
+    post.content = post_content
     await post.save()
 
     # 좋아요 수 계산
     likes_count = await models.Like.filter(post=post).count()
+    # 댓글 수 계산
+    comments_count = await models.Comment.filter(post=post).count()
 
     return schemas.PostResponse(
         id=post.id,
         content=post.content,
+        image_url=post.image_url,
         user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
         artist=schemas.ArtistResponse(
             id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
         ),
         likes_count=likes_count,
+        comments_count=comments_count,
         created_at=post.created_at,
         updated_at=post.updated_at,
     )
@@ -184,6 +199,10 @@ async def delete_post(post_id: int, current_user: User = Depends(get_current_use
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
         )
+
+    # S3에서 이미지 삭제
+    if post.image_url:
+        s3_handler.delete_file(post.image_url)
 
     await post.delete()
 
@@ -246,20 +265,18 @@ async def get_post_likes(post_id: int):
 @posts_router.post("/{post_id}/comments", response_model=schemas.CommentResponse)
 async def create_comment(
     post_id: int,
-    comment_in: schemas.CommentCreate,
+    comment_content: str = Form(...),
     current_user: User = Depends(get_current_user),
 ):
     """댓글 생성"""
     post = await models.Post.get_or_none(id=post_id)
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise HTTPException(status_code=404, detail="Post not found")
 
     comment = await models.Comment.create(
         post=post,
         user=current_user,
-        content=comment_in.comment_content,
+        content=comment_content,
     )
     await comment.fetch_related("user")
 
@@ -306,7 +323,7 @@ async def get_comments(post_id: int):
 @posts_router.put("/comments/{comment_id}", response_model=schemas.CommentResponse)
 async def update_comment(
     comment_id: int,
-    comment_in: schemas.CommentUpdate,
+    comment_content: str = Form(...),
     current_user: User = Depends(get_current_user),
 ):
     """댓글 수정"""
@@ -315,16 +332,12 @@ async def update_comment(
     )
 
     if not comment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
-        )
+        raise HTTPException(status_code=404, detail="Comment not found")
 
     if comment.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
-        )
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-    comment.content = comment_in.comment_content
+    comment.content = comment_content
     await comment.save()
 
     return schemas.CommentResponse(

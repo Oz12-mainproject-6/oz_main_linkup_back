@@ -1,20 +1,32 @@
-import httpx
-import pandas as pd
-import io
 import asyncio
+
 import re
 from typing import BinaryIO
 from typing import Any
+
+import io
+from datetime import datetime, timedelta
+from typing import Any, BinaryIO
+
+import httpx
+import pandas as pd
+
 from fastapi import HTTPException, UploadFile
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
+
 from app.features.events.schemas import FileUploadResponse
 from datetime import datetime, timedelta
+
+
 from tortoise.exceptions import DoesNotExist
+
 from app.features.artists.models import Artist
 from app.features.events.models import EventCategory, Events, EventVisibility
+from app.features.events.schemas import FileUploadResponse
+
 
 # author : Juwon
 # date : 2025.09.22
@@ -33,6 +45,7 @@ class EventCRUD:
         is_active: bool = True,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
+        subscribed_artist_ids: list[int] | None = None,  # 구독 중인 아티스트 ID 목록
     ) -> tuple[list[Events], int]:
         """이벤트 목록 조회"""
         query = Events.filter(is_active=is_active)
@@ -50,6 +63,8 @@ class EventCRUD:
             query = query.filter(start_time__gte=start_date)
         if end_date:
             query = query.filter(start_time__lte=end_date)
+        if subscribed_artist_ids is not None:
+            query = query.filter(artist_id__in=subscribed_artist_ids)
 
         total = await query.count()
         events = (
@@ -151,16 +166,19 @@ class EventCRUD:
         except DoesNotExist:
             return False
 
+
 # author : Juwon
 # date : 2025.09.22
 # content : 기존의 services.py 부분
 
+
 class EventService:
     """이벤트 비즈니스 로직 서비스"""
 
+
     @staticmethod
-    async def process_upload_file(file: UploadFile) -> FileUploadResponse:
-        """파일 업로드 처리"""
+    async def process_upload_file_for_artist(file: UploadFile, artist_id: int) -> FileUploadResponse:
+        """특정 아티스트를 위한 파일 업로드 처리 - title, description, start_time, end_time, location만 처리"""
         try:
             contents = await file.read()
 
@@ -171,11 +189,17 @@ class EventService:
             else:
                 raise ValueError("Unsupported file format")
 
-            # 필수 컬럼 검증
-            required_columns = ["artist_id", "title", "start_time", "category"]
+            # 필수 컬럼 검증 - 간소화된 필드만
+            required_columns = ["title", "start_time"]
             missing_columns = set(required_columns) - set(df.columns)
             if missing_columns:
                 raise ValueError(f"Missing columns: {', '.join(missing_columns)}")
+
+            # Artist 존재 확인
+            try:
+                await Artist.get(id=artist_id)
+            except DoesNotExist:
+                raise ValueError(f"Artist with ID {artist_id} not found")
 
             # 데이터 변환 및 검증
             events_data = []
@@ -191,16 +215,15 @@ class EventService:
                     )
 
                     event_data = {
-                        "artist_id": int(row["artist_id"]),
+                        "artist_id": artist_id,  # 경로에서 받은 artist_id 사용
                         "title": str(row["title"]).strip(),
                         "description": str(row.get("description", "")) or None,
                         "start_time": start_time,
                         "end_time": end_time,
                         "location": str(row.get("location", "")) or None,
-                        "category": EventCategory(row["category"]),
-                        "visibility": EventVisibility(
-                            row.get("visibility", EventVisibility.PUBLIC)
-                        ),
+                        # 기본값 설정
+                        "category": EventCategory.CONCERT,  # 기본 카테고리
+                        "visibility": EventVisibility.PUBLIC,  # 기본 공개 설정
                     }
 
                     # 데이터 검증
@@ -220,11 +243,11 @@ class EventService:
             all_errors = errors + creation_errors
 
             logger.info(
-                f"File upload processed: {created_count}/{len(df)} events created"
+                f"Artist events file upload processed: {created_count}/{len(df)} events created for artist {artist_id}"
             )
 
             return FileUploadResponse(
-                message="File processed successfully",
+                message=f"File processed successfully for artist {artist_id}",
                 total_processed=len(df),
                 successful=created_count,
                 failed=len(df) - created_count,
@@ -237,11 +260,11 @@ class EventService:
             ) from e
 
     @staticmethod
-    async def generate_template() -> BinaryIO:
-        """업로드 템플릿 생성"""
+    async def generate_artist_template() -> BinaryIO:
+        """아티스트용 간소화된 업로드 템플릿 생성 - title, description, start_time, end_time, location만"""
         wb = Workbook()
         ws = wb.active
-        ws.title = "Events Template"
+        ws.title = "Artist Events Template"
 
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(
@@ -249,15 +272,13 @@ class EventService:
         )
         header_alignment = Alignment(horizontal="center", vertical="center")
 
+        # 아티스트용 간소화된 헤더 (artist_id, category, visibility 제외)
         headers = [
-            "artist_id",
             "title",
-            "description",
+            "description", 
             "start_time",
             "end_time",
             "location",
-            "category",
-            "visibility",
         ]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
@@ -269,13 +290,12 @@ class EventService:
         ws_info = wb.create_sheet("Information")
         info_data = [
             ["Column", "Description", "Required", "Example"],
-            ["artist_id", "아티스트 ID (정수)", "Yes", "1"],
             ["title", "이벤트 제목 (최대 200자)", "Yes", "2024 콘서트"],
             ["description", "이벤트 설명", "No", "특별한 콘서트 이벤트"],
             [
                 "start_time",
                 "시작 시간 (YYYY-MM-DD HH:MM:SS)",
-                "Yes",
+                "Yes", 
                 "2024-12-25 19:00:00",
             ],
             [
@@ -285,8 +305,6 @@ class EventService:
                 "2024-12-25 22:00:00",
             ],
             ["location", "위치 (최대 200자)", "No", "올림픽공원"],
-            ["category", "카테고리", "Yes", "concert, fanmeeting, showcase, etc."],
-            ["visibility", "공개 설정", "No", "public, private, subscribers_only"],
         ]
 
         for row, data in enumerate(info_data, 1):
@@ -299,24 +317,18 @@ class EventService:
         # 샘플 데이터 (메인 시트에)
         sample_data = [
             [
-                1,
                 "Sample Concert",
-                "Sample Description",
+                "Sample Description", 
                 "2024-12-25 19:00:00",
                 "2024-12-25 22:00:00",
                 "Seoul Olympic Park",
-                "concert",
-                "public",
             ],
             [
-                1,
                 "Fan Meeting",
                 "Meet & Greet Event",
-                "2024-12-30 15:00:00",
+                "2024-12-30 15:00:00", 
                 "2024-12-30 17:00:00",
                 "Coex Hall",
-                "fanmeeting",
-                "subscribers_only",
             ],
         ]
 
@@ -474,11 +486,10 @@ class EventService:
         # 카테고리별 통계 (추후 구현 예정)
         return {"total_events": len(total_events)}
 
+
 # author : Juwon
 # date : 2025.09.22
 # content : notification.py를 services.py로 이동
-
-
 
 
 class NotificationService:
@@ -763,8 +774,8 @@ class NotificationService:
 notification_service = NotificationService()
 
 
-
 # author : Juwon
+
 # date : 2025.09.25
 # content : 크롤링 관련 메서드들 추가
 
@@ -955,3 +966,19 @@ async def _is_duplicate_event(artist_id: int, title: str, start_time: datetime) 
     except Exception as e:
         logger.error(f"Error checking duplicate event: {str(e)}")
         return False
+
+# date : 2025.09.23
+# content : notification.py를 services.py로 이동
+async def import_artist_events(artist_name: str, unit_id: str):
+    from app.external.scrapping import get_artist_schedule
+
+    schedules = get_artist_schedule(artist_name, unit_id)
+    for s in schedules:
+        await Events.create(
+            title=s["title"],
+            date=s["date"],
+            category=["concert"],  # 필요시 매핑
+            visibility="public",
+        )
+    return schedules
+

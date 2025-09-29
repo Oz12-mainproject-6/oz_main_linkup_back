@@ -305,7 +305,6 @@ class CompanyService:
         group_name: str | None = None,
         debut_date: date | None = None,
         birthdate: date | None = None,
-        artist_type: ArtistType | None = None,
         face_image: UploadFile | None = None,
         torso_image: UploadFile | None = None,
         banner_image: UploadFile | None = None,
@@ -316,6 +315,9 @@ class CompanyService:
                 status_code=400,
                 detail="stage_name 또는 group_name 중 하나는 필수입니다",
             )
+        if not group_name:
+            artist_type = ArtistType.INDIVIDUAL
+        else : artist_type = ArtistType.GROUP
 
         # 1. Artist 생성
         artist = await Artist.create(
@@ -448,9 +450,9 @@ class CompanyService:
         debut_date: date | None = None,
         birthdate: date | None = None,
         artist_type: ArtistType | None = None,
-        face_image_url: str | None = None,
-        torso_image_url: str | None = None,
-        banner_image_url: str | None = None,
+        face_image: UploadFile | None = None,
+        torso_image: UploadFile | None = None,
+        banner_image: UploadFile | None = None,
     ):
         """아티스트 정보와 이미지 업데이트 (Form 방식, POST와 동일한 파라미터)"""
 
@@ -460,6 +462,16 @@ class CompanyService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="해당 아티스트를 찾을 수 없습니다.",
+            )
+
+        # stage_name 또는 group_name 중 하나는 필수 (업데이트 후 기준)
+        final_stage_name = stage_name if stage_name is not None else artist.stage_name
+        final_group_name = group_name if group_name is not None else artist.group_name
+        
+        if not final_stage_name and not final_group_name:
+            raise HTTPException(
+                status_code=400,
+                detail="stage_name 또는 group_name 중 하나는 필수입니다",
             )
 
         # 아티스트 정보 업데이트 (None이 아닌 값만)
@@ -476,31 +488,33 @@ class CompanyService:
 
         await artist.save()
 
-        # 이미지 업데이트 헬퍼 함수 (Form 방식)
-        async def update_image(image_type: ImageType, new_image_url: str | None):
-            if new_image_url is not None and new_image_url.strip():
-                # 기존 이미지 조회
+        # 이미지 업데이트 헬퍼 함수 (파일 업로드 방식)
+        async def update_image(image_type: ImageType, new_image: UploadFile | None, folder: str):
+            if new_image and new_image.filename:
+                # 기존 이미지 삭제
                 existing_image = await SharedImage.filter(
                     artist=artist, image_type=image_type
                 ).first()
+                if existing_image:
+                    # S3에서도 삭제
+                    s3_handler.delete_file(existing_image.url)
+                    await existing_image.delete()
 
-                # 기존 URL과 다를 때만 업데이트
-                if not existing_image or existing_image.url != new_image_url:
-                    # 기존 이미지 삭제
-                    await SharedImage.filter(
-                        artist=artist, image_type=image_type
-                    ).delete()
-
+                # 새 이미지 S3 업로드
+                image_url = await s3_handler.upload_file(new_image, folder=folder)
+                if image_url:
                     # 새 이미지 생성
                     await SharedImage.create(
-                        url=new_image_url,
-                        name=f"{artist.stage_name or artist.group_name}_{image_type.value}.jpg",
+                        url=image_url,
+                        name=new_image.filename,
+                        size=new_image.size,
+                        content_type=new_image.content_type,
                         image_type=image_type,
                         uploaded_by=current_user,
                         artist=artist,
                     )
 
         # 각 이미지 타입별 업데이트
-        await update_image(ImageType.FACE, face_image_url)
-        await update_image(ImageType.TORSO, torso_image_url)
-        await update_image(ImageType.BANNER, banner_image_url)
+        await update_image(ImageType.FACE, face_image, "face")
+        await update_image(ImageType.TORSO, torso_image, "torso")
+        await update_image(ImageType.BANNER, banner_image, "banner")

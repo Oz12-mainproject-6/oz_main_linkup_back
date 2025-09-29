@@ -2,12 +2,15 @@ from datetime import date
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
+    HTTPException,
     Query,
     UploadFile,
 )
+from fastapi.responses import StreamingResponse
 
 from app.features.artists.models import ArtistType
 from app.features.companies.dependencies import get_current_company_user
@@ -18,6 +21,8 @@ from app.features.companies.schemas import (
     EventResponse,
     EventUpdateRequest,
 )
+from app.features.events.schemas import FileUploadResponse
+from app.features.events.services import EventCRUD, EventService, notification_service
 from app.features.companies.service import CompanyService
 from app.features.users.models import Company, User
 
@@ -89,6 +94,29 @@ async def get_company_artists(
     return await CompanyService.get_artists(company, is_active, limit, offset)
 
 
+@companies_router.get("/artists/upload-template")
+async def download_artist_events_template(
+    user_company: tuple[User, Company] = Depends(get_current_company_user),
+):
+    """
+    아티스트용 이벤트 업로드 템플릿 다운로드
+    - 간소화된 필드만 포함: title, description, start_time, end_time, location
+    """
+    current_user, company = user_company
+    
+    try:
+        file_stream = await EventService.generate_artist_template()
+        return StreamingResponse(
+            file_stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=artist_events_template.xlsx"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Template generation error: {str(e)}"
+        ) from e
+
+
 @companies_router.get("/artists/{artist_id}", response_model=DashboardArtistInfo)
 async def get_artist_detail(
     artist_id: int,
@@ -105,7 +133,6 @@ async def create_artist_with_images(
     group_name: str = Form(None),
     debut_date: date = Form(None),
     birthdate: date = Form(None),
-    artist_type: ArtistType = Form(...),
     face_image: UploadFile = File(None),
     torso_image: UploadFile = File(None),
     banner_image: UploadFile = File(None),
@@ -120,7 +147,6 @@ async def create_artist_with_images(
         group_name,
         debut_date,
         birthdate,
-        artist_type,
         face_image,
         torso_image,
         banner_image,
@@ -145,14 +171,16 @@ async def update_artist_with_images(
     group_name: str = Form(None),
     debut_date: date = Form(None),
     birthdate: date = Form(None),
-    artist_type: ArtistType = Form(None),
-    face_image_url: str = Form(None),
-    torso_image_url: str = Form(None),
-    banner_image_url: str = Form(None),
+    artist_type: ArtistType | None = Form(...),
+    face_image: UploadFile = File(None),
+    torso_image: UploadFile = File(None),
+    banner_image: UploadFile = File(None),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
 ):
     """아티스트 정보와 이미지 업데이트 (POST와 동일한 Form 방식)"""
     current_user, company = user_company
+    
+    # POST와 똑같이 직접 전달 (복잡한 process_file 로직 제거)
     await CompanyService.update_artist_with_images_form(
         company,
         current_user,
@@ -162,9 +190,9 @@ async def update_artist_with_images(
         debut_date,
         birthdate,
         artist_type,
-        face_image_url,
-        torso_image_url,
-        banner_image_url,
+        face_image,
+        torso_image,
+        banner_image,
     )
     return {
         "message": "아티스트 정보가 성공적으로 업데이트되었습니다.",
@@ -180,3 +208,48 @@ async def delete_artist(
     """아티스트 삭제 (soft delete)"""
     current_user, company = user_company
     return await CompanyService.delete_artist(company, artist_id)
+
+
+@companies_router.post("/artists/{artist_id}/upload-all", response_model=None)
+async def upload_artist_events_file(
+    artist_id: int,
+    file: UploadFile = File(...),
+    background_tasks = None,
+    user_company: tuple[User, Company] = Depends(get_current_company_user),
+):
+    """
+    특정 아티스트의 이벤트 파일 업로드 및 일괄 생성
+    - Excel(.xlsx) 또는 CSV(.csv) 지원
+    - title, description, start_time, end_time, location 필드만 처리
+    - artist_id를 통해 artist-events 연결
+    """
+    current_user, company = user_company
+    
+    # 파일 확장자 검증
+    if not file.filename.endswith((".xlsx", ".csv")):
+        raise HTTPException(
+            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
+        )
+
+    try:
+        # EventService에서 파일 처리 (artist_id 포함)
+        result = await EventService.process_upload_file_for_artist(file, artist_id)
+
+        # 알림 전송
+        if getattr(result, "successful", 0) > 0 and background_tasks:
+            recent_events, _ = await EventCRUD.get_list(
+                artist_id=artist_id, 
+                limit=result.successful
+            )
+            background_tasks.add_task(
+                notification_service.send_batch_notification,
+                recent_events,
+                "artist_file_upload",
+            )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"File processing error: {str(e)}"
+        ) from e
