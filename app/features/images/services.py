@@ -1,8 +1,9 @@
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 from app.core.s3 import s3_handler
 from app.features.images.models import SharedImage
 from app.shared.utils import validate_image_extension
+from app.core.exceptions import InvalidFileTypeError, UploadFailedError
 
 
 class ImageService:
@@ -16,14 +17,12 @@ class ImageService:
 
         # 파일 확장자 검증
         if not file.filename or not validate_image_extension(file.filename):
-            raise HTTPException(
-                status_code=400, detail="지원하지 않는 이미지 형식입니다."
-            )
+            raise InvalidFileTypeError()
 
         # S3에 파일 업로드
         file_url = await s3_handler.upload_file(file, folder=entity_type)
         if not file_url:
-            raise HTTPException(status_code=500, detail="이미지 업로드에 실패했습니다.")
+            raise UploadFailedError("이미지 업로드에 실패했습니다.")
 
         # DB에 이미지 정보 저장
         image = await SharedImage.create(

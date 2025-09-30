@@ -3,7 +3,6 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     UploadFile,
     status,
@@ -15,6 +14,13 @@ from app.features.notifications.models import Subscription
 from app.features.posts import models, schemas
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
+from app.core.exceptions import (
+    ArtistNotFoundError,
+    PostNotFoundError,
+    CommentNotFoundError,
+    ForbiddenError,
+    UploadFailedError,
+)
 
 posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
@@ -31,14 +37,14 @@ async def create_post(
     # 아티스트 존재 확인
     artist = await Artist.get_or_none(id=artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="Artist not found")
+        raise ArtistNotFoundError()
 
     # S3에 이미지 업로드
     image_url = None
     if post_image and post_image.filename:  # 파일명이 있는 경우에만 업로드 (체크 강화)
         image_url = await s3_handler.upload_file(post_image, S3Folders.POST)
         if not image_url:
-            raise HTTPException(status_code=500, detail="Image upload failed")
+            raise UploadFailedError("이미지 업로드에 실패했습니다")
 
     # 포스트 생성
     post = await models.Post.create(
@@ -107,7 +113,7 @@ async def get_post(post_id: int):
     )
 
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise PostNotFoundError()
 
     # 좋아요 수 계산
     likes_count = await models.Like.filter(post=post).count()
@@ -158,10 +164,10 @@ async def update_post(
         await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
     )
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise PostNotFoundError()
 
     if post.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise ForbiddenError("작성자만 수정할 수 있습니다")
 
     # 포스트 내용 업데이트
     post.content = post_content
@@ -193,14 +199,10 @@ async def delete_post(post_id: int, current_user: User = Depends(get_current_use
     post = await models.Post.get_or_none(id=post_id)
 
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise PostNotFoundError()
 
     if post.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
-        )
+        raise ForbiddenError("작성자만 삭제할 수 있습니다")
 
     # S3에서 이미지 삭제
     if post.image_url:
@@ -215,9 +217,7 @@ async def toggle_like(post_id: int, current_user: User = Depends(get_current_use
     """좋아요 토글"""
     post = await models.Post.get_or_none(id=post_id)
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise PostNotFoundError()
 
     # 기존 좋아요 확인
     existing_like = await models.Like.get_or_none(post=post, user=current_user)
@@ -242,9 +242,7 @@ async def get_post_likes(post_id: int):
     """포스트 좋아요 목록 조회"""
     post = await models.Post.get_or_none(id=post_id)
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise PostNotFoundError()
 
     likes = (
         await models.Like.filter(post=post)
@@ -273,7 +271,7 @@ async def create_comment(
     """댓글 생성"""
     post = await models.Post.get_or_none(id=post_id)
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise PostNotFoundError()
 
     comment = await models.Comment.create(
         post=post,
@@ -297,9 +295,7 @@ async def get_comments(post_id: int):
     """포스트 댓글 목록 조회"""
     post = await models.Post.get_or_none(id=post_id)
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
-        )
+        raise PostNotFoundError()
 
     comments = (
         await models.Comment.filter(post=post)
@@ -334,10 +330,10 @@ async def update_comment(
     )
 
     if not comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
+        raise CommentNotFoundError()
 
     if comment.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise ForbiddenError("댓글 작성자만 수정할 수 있습니다")
 
     comment.content = request.comment_content
     await comment.save()
@@ -360,13 +356,9 @@ async def delete_comment(
     comment = await models.Comment.get_or_none(id=comment_id)
 
     if not comment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
-        )
+        raise CommentNotFoundError()
 
     if comment.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
-        )
+        raise ForbiddenError("댓글 작성자만 삭제할 수 있습니다")
 
     await comment.delete()

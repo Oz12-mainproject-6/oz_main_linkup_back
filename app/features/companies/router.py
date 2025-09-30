@@ -5,7 +5,6 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     UploadFile,
 )
@@ -23,6 +22,7 @@ from app.features.companies.schemas import (
 from app.features.companies.service import CompanyService
 from app.features.events.services import EventCRUD, EventService, notification_service
 from app.features.users.models import Company, User
+from app.core.exceptions import InternalServerError, ValidationError, FileProcessingError
 
 companies_router = APIRouter(prefix="/api/companies", tags=["companies"])
 
@@ -112,9 +112,7 @@ async def download_artist_events_template(
             },
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Template generation error: {str(e)}"
-        ) from e
+        raise InternalServerError(f"Template generation error: {str(e)}") from e
 
 
 @companies_router.get("/artists/{artist_id}", response_model=DashboardArtistInfo)
@@ -227,9 +225,7 @@ async def upload_artist_events_file(
 
     # 파일 확장자 검증
     if not file.filename.endswith((".xlsx", ".csv")):
-        raise HTTPException(
-            status_code=400, detail="Only Excel (.xlsx) and CSV files are supported"
-        )
+        raise ValidationError("Only Excel (.xlsx) and CSV files are supported")
 
     try:
         # EventService에서 파일 처리 (artist_id 포함)
@@ -249,6 +245,4 @@ async def upload_artist_events_file(
         return result
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
+        raise FileProcessingError(f"File processing error: {str(e)}") from e

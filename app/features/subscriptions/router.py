@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from tortoise.exceptions import DoesNotExist
 
 from app.features.artists.models import Artist, ArtistType
@@ -6,6 +6,12 @@ from app.features.images.models import ImageType, SharedImage
 from app.features.notifications.models import Subscription, SubscriptionType
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
+from app.core.exceptions import (
+    ArtistNotFoundError,
+    DuplicateSubscriptionError,
+    NotFoundError,
+    ValidationError,
+)
 
 from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
@@ -21,7 +27,7 @@ async def create_subscription(
     # 아티스트 존재 여부 확인
     artist = await Artist.get_or_none(id=request.artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="아티스트를 찾을 수 없습니다.")
+        raise ArtistNotFoundError()
 
     # 기존 구독 확인 (활성/비활성 모두)
     existing_subscription = await Subscription.filter(
@@ -36,7 +42,7 @@ async def create_subscription(
                 await existing_subscription.save()
                 return {"detail": "상속 구독이 직접 구독으로 변경되었습니다."}
             else:
-                raise HTTPException(status_code=400, detail="이미 구독 중입니다.")
+                raise DuplicateSubscriptionError()
         else:
             # 비활성화된 구독이 있으면 다시 활성화 (직접 구독으로)
             existing_subscription.is_active = True
@@ -166,10 +172,7 @@ async def cancel_subscription(
 
         # INHERITED 구독은 직접 취소 불가
         if sub.subscription_type == SubscriptionType.INHERITED:
-            raise HTTPException(
-                status_code=400,
-                detail="상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요.",
-            )
+            raise ValidationError("상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요.")
 
         # 구독 취소
         sub.is_active = False
@@ -205,4 +208,4 @@ async def cancel_subscription(
 
         return {"detail": "구독 취소 완료"}
     except DoesNotExist:
-        raise HTTPException(status_code=404, detail="구독 정보가 없습니다.") from None
+        raise NotFoundError("구독 정보가 없습니다.") from None

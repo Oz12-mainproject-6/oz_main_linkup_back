@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from tortoise import models
 from tortoise.functions import Count
 
@@ -13,6 +13,7 @@ from app.features.images.models import ImageType, SharedImage
 from app.features.notifications.models import Subscription
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
+from app.core.exceptions import ArtistNotFoundError
 
 idol_router = APIRouter(prefix="/api/idol", tags=["idol"])
 
@@ -126,10 +127,7 @@ async def get_idol_detail(artist_name: str):
     ).first()
 
     if not artist:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"아티스트 '{artist_name}'을 찾을 수 없습니다.",
-        )
+        raise ArtistNotFoundError(f"아티스트 '{artist_name}'을 찾을 수 없습니다.")
 
     # 프로필 이미지 조회 (FACE 타입 우선)
     profile_image_url = None
@@ -183,10 +181,7 @@ async def get_idol_subscription_info(
     ).first()
 
     if not artist:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"아티스트 '{artist_name}'을 찾을 수 없습니다.",
-        )
+        raise ArtistNotFoundError(f"아티스트 '{artist_name}'을 찾을 수 없습니다.")
 
     # 구독 여부 확인
     subscription = await Subscription.filter(user=current_user, artist=artist).first()

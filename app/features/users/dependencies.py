@@ -1,8 +1,14 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.features.users.auth import verify_token
 from app.features.users.models import User
+from app.core.exceptions import (
+    UnauthorizedError,
+    InvalidTokenError,
+    NotFoundError,
+    ForbiddenError,
+)
 
 security = HTTPBearer()
 
@@ -16,35 +22,21 @@ async def get_current_user(
     payload = verify_token(token)
 
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="유효하지 않은 토큰입니다.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise InvalidTokenError()
 
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰에서 사용자 정보를 찾을 수 없습니다.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise UnauthorizedError("토큰에서 사용자 정보를 찾을 수 없습니다.")
 
     user = await User.get_or_none(id=int(user_id))
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다.",
-        )
+        raise NotFoundError("사용자를 찾을 수 없습니다.")
 
     # 밴된 사용자 체크
     from app.features.users.models import UserType
 
     if user.user_type == UserType.BAN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="계정이 차단되어 서비스를 이용할 수 없습니다.",
-        )
+        raise ForbiddenError("계정이 차단되어 서비스를 이용할 수 없습니다.")
 
     return user
 
@@ -54,10 +46,7 @@ async def get_current_fan_user(current_user: User = Depends(get_current_user)) -
     from app.features.users.models import UserType
 
     if current_user.user_type != UserType.FAN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="팬 유저만 접근 가능합니다.",
-        )
+        raise ForbiddenError("팬 유저만 접근 가능합니다.")
     return current_user
 
 
@@ -68,8 +57,5 @@ async def get_current_company_user(
     from app.features.users.models import UserType
 
     if current_user.user_type != UserType.COMPANY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="소속사 유저만 접근 가능합니다.",
-        )
+        raise ForbiddenError("소속사 유저만 접근 가능합니다.")
     return current_user

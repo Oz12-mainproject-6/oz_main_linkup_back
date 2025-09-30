@@ -6,7 +6,7 @@ from typing import Any, BinaryIO
 
 import httpx
 import pandas as pd
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 from loguru import logger
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -15,6 +15,7 @@ from tortoise.exceptions import DoesNotExist
 from app.features.artists.models import Artist
 from app.features.events.models import EventCategory, Events, EventVisibility
 from app.features.events.schemas import FileUploadResponse
+from app.core.exceptions import FileProcessingError, ValidationError
 
 
 # author : Juwon

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.core.s3 import S3Folders, s3_handler
 from app.features.artists.models import Artist
 from app.features.images.models import ImageType, SharedImage
 from app.features.users.dependencies import get_current_company_user, get_current_user
 from app.features.users.models import User
+from app.core.exceptions import ArtistNotFoundError, UploadFailedError
 
 uploads_router = APIRouter(prefix="/api/uploads", tags=["Uploads"])
 
@@ -20,12 +21,12 @@ async def upload_face_image(
     # 아티스트 존재 확인
     artist = await Artist.get_or_none(id=artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="아티스트를 찾을 수 없습니다")
+        raise ArtistNotFoundError()
 
     # S3 업로드
     file_url = await s3_handler.upload_file(file, folder=S3Folders.FACE)
     if not file_url:
-        raise HTTPException(status_code=500, detail="업로드 실패")
+        raise UploadFailedError()
 
     # SharedImage 모델에 저장
     shared_image = await SharedImage.create(
@@ -56,12 +57,12 @@ async def upload_torso_image(
     # 아티스트 존재 확인
     artist = await Artist.get_or_none(id=artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="아티스트를 찾을 수 없습니다")
+        raise ArtistNotFoundError()
 
     # S3 업로드
     file_url = await s3_handler.upload_file(file, folder=S3Folders.TORSO)
     if not file_url:
-        raise HTTPException(status_code=500, detail="업로드 실패")
+        raise UploadFailedError()
 
     # SharedImage 모델에 저장
     shared_image = await SharedImage.create(
@@ -92,12 +93,12 @@ async def upload_banner_image(
     # 아티스트 존재 확인
     artist = await Artist.get_or_none(id=artist_id)
     if not artist:
-        raise HTTPException(status_code=404, detail="아티스트를 찾을 수 없습니다")
+        raise ArtistNotFoundError()
 
     # S3 업로드
     file_url = await s3_handler.upload_file(file, folder=S3Folders.BANNER)
     if not file_url:
-        raise HTTPException(status_code=500, detail="업로드 실패")
+        raise UploadFailedError()
 
     # SharedImage 모델에 저장
     shared_image = await SharedImage.create(
@@ -125,5 +126,5 @@ async def upload_post_image(
     """포스트 이미지 업로드"""
     file_url = await s3_handler.upload_file(file, folder=S3Folders.POST)
     if not file_url:
-        raise HTTPException(status_code=500, detail="업로드 실패")
+        raise UploadFailedError()
     return {"message": "포스트 이미지 업로드 성공", "file_url": file_url}

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.status import HTTP_404_NOT_FOUND
@@ -18,6 +18,7 @@ from app.features.events.services import EventCRUD, EventService, notification_s
 from app.features.notifications.models import Subscription
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
+from app.core.exceptions import ValidationError, NotFoundError, FileProcessingError
 
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -44,9 +45,7 @@ async def get_events(
         end_dt = datetime.fromisoformat(end_date) if end_date else None
 
     except ValueError as err:
-        raise HTTPException(
-            status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
-        ) from err
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
 
     # 구독 중인 아티스트 필터링
     subscribed_artist_ids = None
@@ -81,7 +80,7 @@ async def get_event(event_id: int):
     """이벤트 상세 조회"""
     event = await EventCRUD.get_by_id(event_id)
     if not event:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Event not found")
+        raise NotFoundError("Event not found")
     return event
 
 
@@ -119,7 +118,7 @@ async def download_single_event(event_id: int):
     """
     event = await EventCRUD.get_by_id(event_id)
     if not event:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Event not found")
+        raise NotFoundError("Event not found")
 
     file_stream = await EventService.export_single_event(event)
     return StreamingResponse(
@@ -146,9 +145,7 @@ async def download_bulk_events(
         start_dt = datetime.fromisoformat(start_date) if start_date else None
         end_dt = datetime.fromisoformat(end_date) if end_date else None
     except ValueError as err:
-        raise HTTPException(
-            status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
-        ) from err
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
 
     file_stream = await EventService.export_to_excel(
         artist_id=artist_id, category=category, start_date=start_dt, end_date=end_dt
@@ -178,9 +175,7 @@ async def trigger_notifications(background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Failed to trigger notifications: {str(e)}")
 
-        raise HTTPException(
-            status_code=400, detail=f"File processing error: {str(e)}"
-        ) from e
+        raise FileProcessingError(f"File processing error: {str(e)}") from e
 
 
 # author : Juwon
@@ -264,7 +259,7 @@ async def import_myloveidol_events(
 
     except Exception as e:
         logger.error(f"MyLoveIdol import error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Import error: {str(e)}") from e
+        raise ValidationError(f"Import error: {str(e)}") from e
 
 
 @event_router.get("/events/calendar/", response_model=list[EventOut])

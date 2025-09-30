@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 
-from fastapi import HTTPException, UploadFile, status
+from fastapi import UploadFile
 
 from app.core.s3 import s3_handler
 from app.features.artists.models import Artist, ArtistType
@@ -16,6 +16,7 @@ from app.features.companies.schemas import (
 from app.features.events.models import Events
 from app.features.images.models import ImageType, SharedImage
 from app.features.users.models import Company, User
+from app.core.exceptions import NotFoundError, ValidationError, UploadFailedError
 
 
 class CompanyService:
