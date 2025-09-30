@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
-from app.features.artists.models import ArtistRole, ArtistType
+from app.features.artists.models import ArtistType
 from app.features.events.models import EventCategory, EventVisibility
 
 
@@ -94,16 +94,9 @@ class ArtistCreateRequest(BaseModel):
     stage_name: str | None = None
     group_name: str | None = None
     birthdate: date | None = None
-    gender: str | None = None
-    role: ArtistRole | None = None
-    mbti: str | None = None
-    height: str | None = None
-    nickname: str | None = None
-    email: str
     debut_date: date | None = None
     artist_type: ArtistType
     parent_group_id: int | None = None  # 멤버인 경우 그룹 ID
-    member_count: int | None = None  # 그룹인 경우 멤버 수
 
 
 class ArtistUpdateRequest(BaseModel):
@@ -112,13 +105,6 @@ class ArtistUpdateRequest(BaseModel):
     stage_name: str | None = None
     group_name: str | None = None
     birthdate: date | None = None
-    gender: str | None = None
-    role: ArtistRole | None = None
-    mbti: str | None = None
-    height: str | None = None
-    nickname: str | None = None
-    email: str | None = None
     debut_date: date | None = None
     artist_type: ArtistType | None = None
-    member_count: int | None = None
     is_active: bool | None = None

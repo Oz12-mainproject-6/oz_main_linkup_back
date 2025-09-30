@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from app.features.artists.models import ArtistRole, ArtistType
+from app.features.artists.models import ArtistType
 
 
 class ArtistResponse(BaseModel):
@@ -12,14 +12,8 @@ class ArtistResponse(BaseModel):
     stage_name: str | None = None
     group_name: str | None = None
     birthdate: date | None = None
-    gender: str | None = None
-    role: ArtistRole | None = None
-    mbti: str | None = None
-    height: str | None = None
-    nickname: str | None = None
     debut_date: date | None = None
     artist_type: ArtistType
-    member_count: int | None = None
     is_active: bool
     profile_image: str | None = None
     created_at: str | None = None

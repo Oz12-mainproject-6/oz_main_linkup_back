@@ -72,31 +72,3 @@ class SharedImage(TimestampMixin):
         ]
 
 
-class ImageUsage(TimestampMixin):
-    """이미지 사용 기록 (팬 포스트에서 공유 이미지 사용)"""
-
-    id = fields.BigIntField(pk=True, description="사용 기록 ID")
-
-    shared_image: fields.ForeignKeyRelation["SharedImage"] = fields.ForeignKeyField(
-        "models.SharedImage",
-        related_name="usage_records",
-        description="사용된 이미지",
-    )
-
-    # 사용한 곳
-    post: fields.ForeignKeyRelation["Post"] = fields.ForeignKeyField(
-        "models.Post",
-        related_name="used_images",
-        null=True,
-        description="포스트",
-    )
-
-    # 사용자
-    used_by: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
-        "models.User",
-        related_name="image_usages",
-        description="사용한 사용자",
-    )
-
-    class Meta:
-        table = "image_usage"
