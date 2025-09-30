@@ -30,7 +30,8 @@ async def create_dummy_data():
         await SharedImage.filter(name__contains="더미").delete()
         await Subscription.all().delete()  # 간단하게 모든 구독 삭제
         await Events.filter(title__contains="더미").delete()
-        await Artist.filter(email__contains="dummy").delete()
+        await Artist.filter(stage_name__contains="더미").delete()
+        await Artist.filter(group_name__contains="더미").delete()
         await Company.filter(contact_email__contains="dummy").delete()
         await User.filter(email__contains="dummy").delete()
         print("✅ 기존 데이터 정리 완료")
@@ -128,9 +129,7 @@ async def create_dummy_data():
             group = await Artist.create(
                 company=companies[company_idx],
                 group_name=group_name,
-                email=email,
                 artist_type=ArtistType.GROUP,
-                member_count=member_count,
                 debut_date=datetime.now().date() - timedelta(days=365 * 2),
                 is_active=True,
             )
@@ -181,7 +180,6 @@ async def create_dummy_data():
                 company=companies[company_idx],
                 stage_name=stage_name,
                 group_name=group_name,  # 멤버도 group_name을 가짐
-                email=email,
                 artist_type=ArtistType.INDIVIDUAL,
                 parent_group=parent_group,  # FK 관계 설정!
                 debut_date=datetime.now().date() - timedelta(days=365 * 2),
@@ -208,7 +206,6 @@ async def create_dummy_data():
                 company=companies[company_idx],
                 stage_name=stage_name,
                 # group_name=None (솔로는 그룹명 없음)
-                email=email,
                 artist_type=ArtistType.INDIVIDUAL,
                 # parent_group=None (솔로는 부모 그룹 없음)
                 debut_date=datetime.now().date()
@@ -320,17 +317,16 @@ async def create_dummy_data():
             "더미 포스트 - 무대 위에서 여러분과 함께할 수 있어서 감사해요 🙏",
         ]
 
-        # 실제 생성된 아티스트들을 다시 조회
-        db_artists = await Artist.filter(email__contains="dummy").all()
-        print(f"DB에서 조회한 아티스트 수: {len(db_artists)}")
+        # 실제 생성된 아티스트들 사용
+        print(f"생성된 아티스트 수: {len(artists)}")
 
         for i, content in enumerate(post_contents):
-            if not db_artists:
+            if not artists:
                 print("❌ 생성된 아티스트가 없습니다. 포스트 생성을 건너뛰겠습니다.")
                 break
 
             fan = fan_users[i % len(fan_users)]
-            artist = db_artists[i % len(db_artists)]
+            artist = artists[i % len(artists)]
 
             print(f"포스트 생성: fan_id={fan.id}, artist_id={artist.id}")
 
