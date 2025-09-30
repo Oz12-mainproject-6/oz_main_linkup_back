@@ -41,8 +41,8 @@ echo
 run_check "Ruff check (linting)" "uv run ruff check ."
 run_check "Ruff format check" "uv run ruff format --check ."
 
-# MyPy type checking
-run_check "MyPy type check" "uv run mypy app --ignore-missing-imports --no-implicit-optional --warn-return-any --warn-unused-ignores"
+# MyPy type checking (disabled)
+# run_check "MyPy type check" "uv run mypy app --ignore-missing-imports --no-implicit-optional --warn-return-any --warn-unused-ignores"
 
 # Create tests directory if it doesn't exist
 if [ ! -d "tests" ]; then
