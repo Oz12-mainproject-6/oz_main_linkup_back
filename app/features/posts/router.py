@@ -5,20 +5,10 @@ from fastapi import (
     Form,
     Query,
     UploadFile,
-    status,
 )
 
-from app.core.exceptions import (
-    ArtistNotFoundError,
-    CommentNotFoundError,
-    ForbiddenError,
-    PostNotFoundError,
-    UploadFailedError,
-)
-from app.core.s3 import S3Folders, s3_handler
-from app.features.artists.models import Artist
-from app.features.notifications.models import Subscription
-from app.features.posts import models, schemas
+from app.features.posts import schemas
+from app.features.posts.service import PostService
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
 
@@ -34,27 +24,7 @@ async def create_post(
     current_user: User = Depends(get_current_user),
 ):
     """포스트 생성"""
-    # 아티스트 존재 확인
-    artist = await Artist.get_or_none(id=artist_id)
-    if not artist:
-        raise ArtistNotFoundError()
-
-    # S3에 이미지 업로드
-    image_url = None
-    if post_image and post_image.filename:  # 파일명이 있는 경우에만 업로드 (체크 강화)
-        image_url = await s3_handler.upload_file(post_image, S3Folders.POST)
-        if not image_url:
-            raise UploadFailedError("이미지 업로드에 실패했습니다")
-
-    # 포스트 생성
-    post = await models.Post.create(
-        user=current_user,
-        artist=artist,
-        content=post_content,
-        image_url=image_url,
-    )
-
-    return {"detail": "포스트가 성공적으로 생성되었습니다.", "post_id": post.id}
+    return await PostService.create_post(artist_id, post_content, post_image, current_user)
 
 
 @posts_router.get("/", response_model=list[schemas.PostResponse])
@@ -67,90 +37,13 @@ async def get_posts(
     ),
 ):
     """포스트 목록 조회"""
-    query = models.Post.all().prefetch_related("user", "artist")
-
-    """구독중인 아티스트의 팬포스트 조회"""
-    if is_active:
-        subscribed_artist_ids = await Subscription.filter(is_active=True).values_list(
-            "artist_id", flat=True
-        )
-        query = query.filter(id__in=subscribed_artist_ids)
-
-    if artist_id:
-        query = query.filter(artist_id=artist_id)
-
-    posts = await query.offset(offset).limit(limit).order_by("-created_at")
-
-    result = []
-    for post in posts:
-        likes_count = await models.Like.filter(post=post).count()
-        comments_count = await models.Comment.filter(post=post).count()
-        result.append(
-            schemas.PostResponse(
-                id=post.id,
-                content=post.content,
-                image_url=post.image_url,
-                user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
-                artist=schemas.ArtistResponse(
-                    id=post.artist.id,
-                    name=post.artist.stage_name or post.artist.group_name,
-                ),
-                likes_count=likes_count,
-                comments_count=comments_count,
-                created_at=post.created_at,
-                updated_at=post.updated_at,
-            )
-        )
-
-    return result
+    return await PostService.get_posts(limit, offset, artist_id, is_active)
 
 
 @posts_router.get("/{post_id}", response_model=schemas.PostDetailResponse)
 async def get_post(post_id: int):
     """포스트 상세 조회 (댓글 포함)"""
-    post = (
-        await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
-    )
-
-    if not post:
-        raise PostNotFoundError()
-
-    # 좋아요 수 계산
-    likes_count = await models.Like.filter(post=post).count()
-
-    # 댓글 조회
-    comments = (
-        await models.Comment.filter(post=post)
-        .prefetch_related("user")
-        .order_by("created_at")
-    )
-    comment_responses = [
-        schemas.CommentResponse(
-            id=comment.id,
-            content=comment.content,
-            user=schemas.UserResponse(
-                id=comment.user.id, nickname=comment.user.nickname
-            ),
-            post_id=comment.post_id,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-        )
-        for comment in comments
-    ]
-
-    return schemas.PostDetailResponse(
-        id=post.id,
-        content=post.content,
-        image_url=post.image_url,
-        user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
-        artist=schemas.ArtistResponse(
-            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
-        ),
-        likes_count=likes_count,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-        comments=comment_responses,
-    )
+    return await PostService.get_post_detail(post_id)
 
 
 @posts_router.put("/{post_id}", response_model=schemas.PostResponse)
@@ -160,105 +53,26 @@ async def update_post(
     current_user: User = Depends(get_current_user),
 ):
     """포스트 수정"""
-    post = (
-        await models.Post.filter(id=post_id).prefetch_related("user", "artist").first()
-    )
-    if not post:
-        raise PostNotFoundError()
-
-    if post.user_id != current_user.id:
-        raise ForbiddenError("작성자만 수정할 수 있습니다")
-
-    # 포스트 내용 업데이트
-    post.content = post_content
-    await post.save()
-
-    # 좋아요 수 계산
-    likes_count = await models.Like.filter(post=post).count()
-    # 댓글 수 계산
-    comments_count = await models.Comment.filter(post=post).count()
-
-    return schemas.PostResponse(
-        id=post.id,
-        content=post.content,
-        image_url=post.image_url,
-        user=schemas.UserResponse(id=post.user.id, nickname=post.user.nickname),
-        artist=schemas.ArtistResponse(
-            id=post.artist.id, name=post.artist.stage_name or post.artist.group_name
-        ),
-        likes_count=likes_count,
-        comments_count=comments_count,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-    )
+    return await PostService.update_post(post_id, post_content, current_user)
 
 
-@posts_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+@posts_router.delete("/{post_id}")
 async def delete_post(post_id: int, current_user: User = Depends(get_current_user)):
     """포스트 삭제"""
-    post = await models.Post.get_or_none(id=post_id)
-
-    if not post:
-        raise PostNotFoundError()
-
-    if post.user_id != current_user.id:
-        raise ForbiddenError("작성자만 삭제할 수 있습니다")
-
-    # S3에서 이미지 삭제
-    if post.image_url:
-        s3_handler.delete_file(post.image_url)
-
-    await post.delete()
+    await PostService.delete_post(post_id, current_user)
 
 
 # ----------------- Like 기능 -----------------
 @posts_router.post("/{post_id}/like")
 async def toggle_like(post_id: int, current_user: User = Depends(get_current_user)):
     """좋아요 토글"""
-    post = await models.Post.get_or_none(id=post_id)
-    if not post:
-        raise PostNotFoundError()
-
-    # 기존 좋아요 확인
-    existing_like = await models.Like.get_or_none(post=post, user=current_user)
-
-    if existing_like:
-        # 좋아요 취소
-        await existing_like.delete()
-        liked = False
-    else:
-        # 좋아요 추가
-        await models.Like.create(post=post, user=current_user)
-        liked = True
-
-    # 총 좋아요 수 계산
-    likes_count = await models.Like.filter(post=post).count()
-
-    return {"liked": liked, "likes_count": likes_count}
+    return await PostService.toggle_like(post_id, current_user)
 
 
 @posts_router.get("/{post_id}/likes", response_model=list[schemas.LikeResponse])
 async def get_post_likes(post_id: int):
     """포스트 좋아요 목록 조회"""
-    post = await models.Post.get_or_none(id=post_id)
-    if not post:
-        raise PostNotFoundError()
-
-    likes = (
-        await models.Like.filter(post=post)
-        .prefetch_related("user")
-        .order_by("-created_at")
-    )
-
-    return [
-        schemas.LikeResponse(
-            id=like.id,
-            user=schemas.UserResponse(id=like.user.id, nickname=like.user.nickname),
-            post_id=like.post_id,
-            created_at=like.created_at,
-        )
-        for like in likes
-    ]
+    return await PostService.get_post_likes(post_id)
 
 
 # ----------------- Comment CRUD -----------------
@@ -269,53 +83,13 @@ async def create_comment(
     current_user: User = Depends(get_current_user),
 ):
     """댓글 생성"""
-    post = await models.Post.get_or_none(id=post_id)
-    if not post:
-        raise PostNotFoundError()
-
-    comment = await models.Comment.create(
-        post=post,
-        user=current_user,
-        content=request.comment_content,
-    )
-    await comment.fetch_related("user")
-
-    return schemas.CommentResponse(
-        id=comment.id,
-        content=comment.content,
-        user=schemas.UserResponse(id=comment.user.id, nickname=comment.user.nickname),
-        post_id=comment.post_id,
-        created_at=comment.created_at,
-        updated_at=comment.updated_at,
-    )
+    return await PostService.create_comment(post_id, request.comment_content, current_user)
 
 
 @posts_router.get("/{post_id}/comments", response_model=list[schemas.CommentResponse])
 async def get_comments(post_id: int):
     """포스트 댓글 목록 조회"""
-    post = await models.Post.get_or_none(id=post_id)
-    if not post:
-        raise PostNotFoundError()
-
-    comments = (
-        await models.Comment.filter(post=post)
-        .prefetch_related("user")
-        .order_by("created_at")
-    )
-
-    return [
-        schemas.CommentResponse(
-            id=comment.id,
-            content=comment.content,
-            user=schemas.UserResponse(
-                id=comment.user.id, nickname=comment.user.nickname
-            ),
-            post_id=comment.post_id,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-        )
-        for comment in comments
-    ]
+    return await PostService.get_comments(post_id)
 
 
 @posts_router.put("/comments/{comment_id}", response_model=schemas.CommentResponse)
@@ -325,40 +99,12 @@ async def update_comment(
     current_user: User = Depends(get_current_user),
 ):
     """댓글 수정"""
-    comment = (
-        await models.Comment.filter(id=comment_id).prefetch_related("user").first()
-    )
-
-    if not comment:
-        raise CommentNotFoundError()
-
-    if comment.user_id != current_user.id:
-        raise ForbiddenError("댓글 작성자만 수정할 수 있습니다")
-
-    comment.content = request.comment_content
-    await comment.save()
-
-    return schemas.CommentResponse(
-        id=comment.id,
-        content=comment.content,
-        user=schemas.UserResponse(id=comment.user.id, nickname=comment.user.nickname),
-        post_id=comment.post_id,
-        created_at=comment.created_at,
-        updated_at=comment.updated_at,
-    )
+    return await PostService.update_comment(comment_id, request.comment_content, current_user)
 
 
-@posts_router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@posts_router.delete("/comments/{comment_id}")
 async def delete_comment(
     comment_id: int, current_user: User = Depends(get_current_user)
 ):
     """댓글 삭제"""
-    comment = await models.Comment.get_or_none(id=comment_id)
-
-    if not comment:
-        raise CommentNotFoundError()
-
-    if comment.user_id != current_user.id:
-        raise ForbiddenError("댓글 작성자만 삭제할 수 있습니다")
-
-    await comment.delete()
+    await PostService.delete_comment(comment_id, current_user)
