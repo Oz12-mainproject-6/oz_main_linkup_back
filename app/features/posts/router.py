@@ -8,6 +8,7 @@ from fastapi import (
 )
 
 from app.features.posts import schemas
+from app.features.posts.schemas import PostsQueryParams
 from app.features.posts.service import PostService
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
@@ -30,16 +31,9 @@ async def create_post(
 
 
 @posts_router.get("/", response_model=list[schemas.PostResponse])
-async def get_posts(
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    artist_id: int = Query(None, description="특정 아티스트의 포스트만 조회"),
-    is_active: bool = Query(
-        None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
-    ),
-):
+async def get_posts(params: PostsQueryParams = Depends()):
     """포스트 목록 조회"""
-    return await PostService.get_posts(limit, offset, artist_id, is_active)
+    return await PostService.get_posts(params.limit, params.offset, params.artist_id, params.is_active)
 
 
 @posts_router.get("/{post_id}", response_model=schemas.PostDetailResponse)

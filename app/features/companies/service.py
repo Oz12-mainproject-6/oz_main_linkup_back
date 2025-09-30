@@ -85,7 +85,7 @@ class CompanyService:
         company: Company,
         artist_id: int | None = None,
         limit: int = 20,
-        offset: int = 0,
+        page: int = 1,
     ) -> list[EventResponse]:
         query = Events.filter(artist__company=company, is_active=True)
 
@@ -95,6 +95,9 @@ class CompanyService:
             if not artist:
                 raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
             query = query.filter(artist_id=artist_id)
+
+        # offset 계산
+        offset = (page - 1) * limit
 
         events = (
             await query.prefetch_related("artist")
@@ -223,12 +226,15 @@ class CompanyService:
         company: Company,
         is_active: bool | None = True,
         limit: int = 50,
-        offset: int = 0,
+        page: int = 1,
     ) -> list[DashboardArtistInfo]:
         query = Artist.filter(company=company)
 
         if is_active is not None:
             query = query.filter(is_active=is_active)
+
+        # offset 계산
+        offset = (page - 1) * limit
 
         artists = await query.order_by("-created_at").offset(offset).limit(limit)
 

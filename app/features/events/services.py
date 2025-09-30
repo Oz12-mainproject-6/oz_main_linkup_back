@@ -26,7 +26,7 @@ class EventCRUD:
 
     @staticmethod
     async def get_list(
-        skip: int = 0,
+        page: int = 1,
         limit: int = 100,
         artist_parent_group: int | None = None,  # 🔹 Artist의 parent_group ID로 필터링
         artist_id: int | None = None,
@@ -56,10 +56,13 @@ class EventCRUD:
         if subscribed_artist_ids is not None:
             query = query.filter(artist_id__in=subscribed_artist_ids)
 
+        # offset 계산
+        offset = (page - 1) * limit
+
         total = await query.count()
         events = (
             await query.select_related("artist")  # 🔹 Artist만 join
-            .offset(skip)
+            .offset(offset)
             .limit(limit)
             .order_by("-start_time")
         )

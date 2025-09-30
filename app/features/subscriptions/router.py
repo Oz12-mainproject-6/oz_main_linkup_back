@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User
 
-from .schemas import SubscriptionCreate
+from .schemas import SubscriptionCreate, SubscriptionsQueryParams
 from .service import SubscriptionService
 
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -21,16 +21,12 @@ async def create_subscription(
 
 @subscriptions_router.get("/")
 async def list_subscriptions(
-    include_image: bool = Query(
-        False, description="아티스트 face 이미지 URL 포함 여부"
-    ),
-    group_name: str | None = Query(None, description="그룹명으로 필터링"),
-    stage_name: str | None = Query(None, description="활동명으로 필터링"),
+    params: SubscriptionsQueryParams = Depends(),
     current_user: User = Depends(get_current_fan_user),
 ):
     """내 구독 목록 조회"""
     return await SubscriptionService.get_subscriptions(
-        current_user, include_image, group_name, stage_name
+        current_user, params.include_image, params.group_name, params.stage_name
     )
 
 

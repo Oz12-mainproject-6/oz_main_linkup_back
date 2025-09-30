@@ -136,7 +136,7 @@ class PostService:
     @staticmethod
     async def get_posts(
         limit: int,
-        offset: int,
+        page: int,
         artist_id: int | None = None,
         is_active: bool | None = None,
     ) -> list[schemas.PostResponse]:
@@ -151,6 +151,9 @@ class PostService:
 
         if artist_id:
             query = query.filter(artist_id=artist_id)
+
+        # offset 계산
+        offset = (page - 1) * limit
 
         posts = await query.offset(offset).limit(limit).order_by("-created_at")
 

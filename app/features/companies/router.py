@@ -18,7 +18,9 @@ from app.core.exceptions import (
 from app.features.artists.models import ArtistType
 from app.features.companies.dependencies import get_current_company_user
 from app.features.companies.schemas import (
+    CompanyArtistsQueryParams,
     CompanyDashboardResponse,
+    CompanyEventsQueryParams,
     DashboardArtistInfo,
     EventCreateRequest,
     EventResponse,
@@ -42,14 +44,12 @@ async def get_company_dashboard(
 
 @companies_router.get("/events", response_model=list[EventResponse])
 async def get_company_events(
+    params: CompanyEventsQueryParams = Depends(),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
-    artist_id: int | None = Query(None, description="특정 아티스트 이벤트 필터"),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
 ):
     """소속사 이벤트 목록 조회"""
     current_user, company = user_company
-    return await CompanyService.get_events(company, artist_id, limit, offset)
+    return await CompanyService.get_events(company, params.artist_id, params.limit, params.offset)
 
 
 @companies_router.post("/events", response_model=EventResponse)
@@ -86,14 +86,12 @@ async def delete_event(
 # Artist 관리 엔드포인트
 @companies_router.get("/artists", response_model=list[DashboardArtistInfo])
 async def get_company_artists(
+    params: CompanyArtistsQueryParams = Depends(),
     user_company: tuple[User, Company] = Depends(get_current_company_user),
-    is_active: bool | None = Query(True, description="활동 상태 필터 (기본값: True)"),
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
 ):
     """소속사 아티스트 목록 조회"""
     current_user, company = user_company
-    return await CompanyService.get_artists(company, is_active, limit, offset)
+    return await CompanyService.get_artists(company, params.is_active, params.limit, params.offset)
 
 
 @companies_router.get("/artists/upload-template")

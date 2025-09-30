@@ -1,7 +1,8 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.core.schemas import BaseQueryParams
 from app.features.artists.models import ArtistType
 
 
@@ -53,3 +54,17 @@ class ArtistListPaginationResponse(BaseModel):
     page: int
     limit: int
     has_next: bool
+
+
+class ArtistQueryParams(BaseQueryParams):
+    """아티스트 리스트 쿼리 파라미터 스키마"""
+    
+    artist_type: str | None = Field(None, description="아티스트 타입 필터 (group/individual)")
+    artist_name: str | None = Field(None, description="아티스트 이름 필터 (group_name/stage_name)")
+    artist_id: int | None = Field(None, description="아티스트 ID 필터")
+
+
+class SubscribedArtistsQueryParams(BaseQueryParams):
+    """구독 아티스트 리스트 쿼리 파라미터 스키마"""
+    
+    pass  # 기본 페이지네이션만 사용
