@@ -154,6 +154,7 @@ async def create_artist_with_images(
         banner_image,
     )
 
+
 @companies_router.put("/artists/{artist_id}")
 async def update_artist_with_images(
     artist_id: int,

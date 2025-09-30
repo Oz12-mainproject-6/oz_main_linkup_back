@@ -26,7 +26,9 @@ class SubscriptionService:
         return artist
 
     @staticmethod
-    async def get_existing_subscription(user: User, artist: Artist) -> Subscription | None:
+    async def get_existing_subscription(
+        user: User, artist: Artist
+    ) -> Subscription | None:
         """기존 구독 확인 (활성/비활성 모두)"""
         return await Subscription.filter(user=user, artist=artist).first()
 
@@ -83,7 +85,9 @@ class SubscriptionService:
     @staticmethod
     async def handle_member_subscription(user: User, member: Artist):
         """멤버 구독 처리 (상속 구독)"""
-        existing_member_sub = await Subscription.filter(user=user, artist=member).first()
+        existing_member_sub = await Subscription.filter(
+            user=user, artist=member
+        ).first()
 
         if not existing_member_sub:
             # 상속 구독 생성
@@ -113,7 +117,10 @@ class SubscriptionService:
 
         is_resubscription = False
         if existing_subscription:
-            is_resubscription, message = await SubscriptionService.handle_existing_subscription(
+            (
+                is_resubscription,
+                message,
+            ) = await SubscriptionService.handle_existing_subscription(
                 existing_subscription, user, artist
             )
             if message != "구독이 재활성화되었습니다.":
@@ -221,9 +228,7 @@ class SubscriptionService:
     async def cancel_subscription(artist_id: int, user: User) -> dict:
         """구독 취소"""
         try:
-            sub = await Subscription.get(
-                artist_id=artist_id, user=user, is_active=True
-            )
+            sub = await Subscription.get(artist_id=artist_id, user=user, is_active=True)
             artist = await sub.artist
 
             # INHERITED 구독은 직접 취소 불가
@@ -241,8 +246,10 @@ class SubscriptionService:
                 sub.subscription_type == SubscriptionType.DIRECT
                 and artist.artist_type == ArtistType.GROUP
             ):
-                inherited_subscriptions = await SubscriptionService.get_inherited_subscriptions_to_cancel(
-                    user, artist
+                inherited_subscriptions = (
+                    await SubscriptionService.get_inherited_subscriptions_to_cancel(
+                        user, artist
+                    )
                 )
 
                 for inherited_sub in inherited_subscriptions:

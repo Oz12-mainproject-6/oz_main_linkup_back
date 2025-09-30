@@ -10,7 +10,6 @@ from app.core.mixins import TimestampMixin
 if TYPE_CHECKING:
     from app.features.artists.models import Artist
     from app.features.events.models import Events
-    from app.features.posts.models import Post
     from app.features.users.models import User
 
 
@@ -70,5 +69,3 @@ class SharedImage(TimestampMixin):
                 "image_type",
             ),  # artist + image_type 복합 인덱스 (자주 함께 쿼리됨)
         ]
-
-

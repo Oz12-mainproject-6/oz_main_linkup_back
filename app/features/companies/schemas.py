@@ -86,5 +86,3 @@ class EventResponse(BaseModel):
     artist_stage_name: str | None = None
     created_at: str
     updated_at: str
-
-

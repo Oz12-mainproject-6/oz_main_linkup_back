@@ -387,7 +387,6 @@ class CompanyService:
             "banner_image_url": banner_url,
         }
 
-
     @staticmethod
     async def delete_artist(company: Company, artist_id: int) -> dict[str, str]:
         artist = await Artist.get_or_none(id=artist_id, company=company, is_active=True)

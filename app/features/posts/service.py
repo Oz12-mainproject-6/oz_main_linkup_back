@@ -32,7 +32,7 @@ class PostService:
         """포스트 응답 객체 생성"""
         likes_count = await PostService.get_likes_count(post)
         comments_count = await PostService.get_comments_count(post)
-        
+
         return schemas.PostResponse(
             id=post.id,
             content=post.content,
@@ -49,7 +49,9 @@ class PostService:
         )
 
     @staticmethod
-    async def build_comment_response(comment: models.Comment) -> schemas.CommentResponse:
+    async def build_comment_response(
+        comment: models.Comment,
+    ) -> schemas.CommentResponse:
         """댓글 응답 객체 생성"""
         return schemas.CommentResponse(
             id=comment.id,
@@ -86,16 +88,16 @@ class PostService:
     async def validate_comment_exists(comment_id: int) -> models.Comment:
         """댓글 존재 확인 (관련 객체 포함)"""
         comment = (
-            await models.Comment.filter(id=comment_id)
-            .prefetch_related("user")
-            .first()
+            await models.Comment.filter(id=comment_id).prefetch_related("user").first()
         )
         if not comment:
             raise CommentNotFoundError()
         return comment
 
     @staticmethod
-    def validate_user_permission(obj_user_id: int, current_user: User, action: str = "수정"):
+    def validate_user_permission(
+        obj_user_id: int, current_user: User, action: str = "수정"
+    ):
         """사용자 권한 확인"""
         if obj_user_id != current_user.id:
             raise ForbiddenError(f"작성자만 {action}할 수 있습니다")
@@ -105,7 +107,7 @@ class PostService:
         """포스트 이미지 업로드"""
         if not post_image or not post_image.filename:
             return None
-            
+
         image_url = await s3_handler.upload_file(post_image, S3Folders.POST)
         if not image_url:
             raise UploadFailedError("이미지 업로드에 실패했습니다")
@@ -113,10 +115,10 @@ class PostService:
 
     @staticmethod
     async def create_post(
-        artist_id: int, 
-        post_content: str, 
-        post_image: UploadFile | None, 
-        current_user: User
+        artist_id: int,
+        post_content: str,
+        post_image: UploadFile | None,
+        current_user: User,
     ) -> dict:
         """포스트 생성"""
         artist = await PostService.validate_artist_exists(artist_id)
@@ -142,9 +144,9 @@ class PostService:
         query = models.Post.all().prefetch_related("user", "artist")
 
         if is_active:
-            subscribed_artist_ids = await Subscription.filter(is_active=True).values_list(
-                "artist_id", flat=True
-            )
+            subscribed_artist_ids = await Subscription.filter(
+                is_active=True
+            ).values_list("artist_id", flat=True)
             query = query.filter(artist_id__in=subscribed_artist_ids)
 
         if artist_id:
@@ -171,8 +173,7 @@ class PostService:
             .order_by("created_at")
         )
         comment_responses = [
-            await PostService.build_comment_response(comment) 
-            for comment in comments
+            await PostService.build_comment_response(comment) for comment in comments
         ]
 
         return schemas.PostDetailResponse(
@@ -291,8 +292,7 @@ class PostService:
         )
 
         return [
-            await PostService.build_comment_response(comment) 
-            for comment in comments
+            await PostService.build_comment_response(comment) for comment in comments
         ]
 
     @staticmethod

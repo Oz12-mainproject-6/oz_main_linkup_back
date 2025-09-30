@@ -14,7 +14,9 @@ async def create_subscription(
     request: SubscriptionCreate, current_user: User = Depends(get_current_fan_user)
 ):
     """팬 → 아티스트 구독"""
-    return await SubscriptionService.create_subscription(request.artist_id, current_user)
+    return await SubscriptionService.create_subscription(
+        request.artist_id, current_user
+    )
 
 
 @subscriptions_router.get("/")

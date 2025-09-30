@@ -6,6 +6,7 @@ from app.features.artists.models import Artist
 from app.features.artists.schemas import (
     ArtistListPaginationResponse,
     ArtistListResponse,
+    ArtistResponse,
     ArtistSubscriptionInfo,
 )
 from app.features.images.models import ImageType, SharedImage
@@ -18,11 +19,12 @@ class ArtistService:
     async def get_artist_list(
         artist_type: str | None = None,
         artist_name: str | None = None,
+        artist_id: int | None = None,
         limit: int = 20,
         page: int = 1,
     ) -> ArtistListPaginationResponse:
         """아티스트 리스트 조회 (활성 상태만)"""
-        
+
         # offset 계산
         offset = (page - 1) * limit
 
@@ -38,6 +40,9 @@ class ArtistService:
                 models.Q(stage_name__icontains=artist_name)
                 | models.Q(group_name__icontains=artist_name)
             )
+
+        if artist_id:
+            query = query.filter(id=artist_id)
 
         # 총 개수 조회
         total = await query.count()
@@ -74,7 +79,7 @@ class ArtistService:
         page: int = 1,
     ) -> ArtistListPaginationResponse:
         """구독 중인 아티스트 리스트 조회"""
-        
+
         # offset 계산
         offset = (page - 1) * limit
 
@@ -124,7 +129,7 @@ class ArtistService:
         artist_name: str, user: User | None = None
     ) -> ArtistSubscriptionInfo:
         """구독 아티스트 확인"""
-        
+
         # 아티스트 조회 (활성 상태만)
         artist = await Artist.filter(
             models.Q(stage_name__iexact=artist_name)
@@ -148,13 +153,15 @@ class ArtistService:
             group_name=artist.group_name,
             artist_type=artist.artist_type,
             is_subscribed=subscription is not None,
-            subscription_date=subscription.created_at.isoformat() if subscription else None,
+            subscription_date=subscription.created_at.isoformat()
+            if subscription
+            else None,
         )
 
     @staticmethod
     async def _build_artist_response(artist: Artist) -> ArtistListResponse:
         """아티스트 응답 데이터 구성"""
-        
+
         # 모든 이미지 타입 조회
         face_image = await SharedImage.filter(
             artist=artist, image_type=ImageType.FACE
@@ -180,4 +187,39 @@ class ArtistService:
             face_url=face_image.url if face_image else None,
             torso_url=torso_image.url if torso_image else None,
             banner_url=banner_image.url if banner_image else None,
+        )
+
+    @staticmethod
+    async def get_artist_detail(artist_name: str) -> ArtistResponse:
+        """아티스트 상세 조회"""
+
+        # 아티스트 조회 (활성 상태만)
+        artist = await Artist.filter(
+            models.Q(stage_name__iexact=artist_name)
+            | models.Q(group_name__iexact=artist_name)
+            | models.Q(stage_name__icontains=artist_name)
+            | models.Q(group_name__icontains=artist_name),
+            is_active=True,
+        ).first()
+
+        if not artist:
+            raise ArtistNotFoundError(f"아티스트 '{artist_name}'을 찾을 수 없습니다.")
+
+        # 기본 아티스트 데이터 빌드 (이미지 포함)
+        artist_data = await ArtistService._build_artist_response(artist)
+
+        return ArtistResponse(
+            id=artist_data.id,
+            stage_name=artist.stage_name,
+            group_name=artist.group_name,
+            birthdate=artist.birthdate,
+            debut_date=artist.debut_date,
+            artist_type=artist.artist_type,
+            is_active=artist.is_active,
+            profile_image=artist_data.profile_image,
+            face_url=artist_data.face_url,
+            torso_url=artist_data.torso_url,
+            banner_url=artist_data.banner_url,
+            created_at=artist.created_at.isoformat() if artist.created_at else None,
+            updated_at=artist.updated_at.isoformat() if artist.updated_at else None,
         )

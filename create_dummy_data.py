@@ -259,7 +259,10 @@ async def create_dummy_data():
         for fan in fan_users:
             for _i, artist in enumerate(artists[:3]):  # 각 팬이 3명 구독
                 subscription = await Subscription.create(
-                    user=fan, artist=artist, is_active=True, subscription_type=SubscriptionType.DIRECT
+                    user=fan,
+                    artist=artist,
+                    is_active=True,
+                    subscription_type=SubscriptionType.DIRECT,
                 )
                 subscriptions.append(subscription)
         print(f"✅ 구독 관계 {len(subscriptions)}개 생성 완료")
@@ -291,7 +294,16 @@ async def create_dummy_data():
                 uploaded_by=uploader,
                 artist=artist,
             )
-            images.extend([face_img, torso_img])
+
+            # Banner 이미지 추가
+            banner_img = await SharedImage.create(
+                name=f"더미_{artist_name}_banner.jpg",
+                url=f"https://picsum.photos/800/300?random={i * 3}",
+                image_type=ImageType.BANNER,
+                uploaded_by=uploader,
+                artist=artist,
+            )
+            images.extend([face_img, torso_img, banner_img])
         print(f"✅ 이미지 {len(images)}개 생성 완료")
 
         # 9. 포스트 생성

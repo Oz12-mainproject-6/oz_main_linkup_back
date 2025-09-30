@@ -24,7 +24,9 @@ async def create_post(
     current_user: User = Depends(get_current_user),
 ):
     """포스트 생성"""
-    return await PostService.create_post(artist_id, post_content, post_image, current_user)
+    return await PostService.create_post(
+        artist_id, post_content, post_image, current_user
+    )
 
 
 @posts_router.get("/", response_model=list[schemas.PostResponse])
@@ -83,7 +85,9 @@ async def create_comment(
     current_user: User = Depends(get_current_user),
 ):
     """댓글 생성"""
-    return await PostService.create_comment(post_id, request.comment_content, current_user)
+    return await PostService.create_comment(
+        post_id, request.comment_content, current_user
+    )
 
 
 @posts_router.get("/{post_id}/comments", response_model=list[schemas.CommentResponse])
@@ -99,7 +103,9 @@ async def update_comment(
     current_user: User = Depends(get_current_user),
 ):
     """댓글 수정"""
-    return await PostService.update_comment(comment_id, request.comment_content, current_user)
+    return await PostService.update_comment(
+        comment_id, request.comment_content, current_user
+    )
 
 
 @posts_router.delete("/comments/{comment_id}")

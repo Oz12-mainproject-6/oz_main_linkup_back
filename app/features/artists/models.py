@@ -18,7 +18,6 @@ class ArtistType(str, Enum):
     GROUP = "group"
 
 
-
 class Artist(TimestampMixin):
     """아티스트 모델 (그룹/멤버/솔로 통합)"""
 
