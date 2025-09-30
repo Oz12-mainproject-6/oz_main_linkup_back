@@ -154,18 +154,6 @@ async def create_artist_with_images(
         banner_image,
     )
 
-
-# @companies_router.put("/artists/{artist_id}")
-# async def update_artist(
-#     artist_id: int,
-#     request: ArtistUpdateRequest,
-#     user_company: tuple[User, Company] = Depends(get_current_company_user),
-# ):
-#     """아티스트 수정"""
-#     current_user, company = user_company
-#     return await CompanyService.update_artist(company, artist_id, request)
-
-
 @companies_router.put("/artists/{artist_id}")
 async def update_artist_with_images(
     artist_id: int,

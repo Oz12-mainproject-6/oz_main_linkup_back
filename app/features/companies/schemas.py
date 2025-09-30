@@ -88,23 +88,3 @@ class EventResponse(BaseModel):
     updated_at: str
 
 
-class ArtistCreateRequest(BaseModel):
-    """아티스트 생성 요청"""
-
-    stage_name: str | None = None
-    group_name: str | None = None
-    birthdate: date | None = None
-    debut_date: date | None = None
-    artist_type: ArtistType
-    parent_group_id: int | None = None  # 멤버인 경우 그룹 ID
-
-
-class ArtistUpdateRequest(BaseModel):
-    """아티스트 수정 요청"""
-
-    stage_name: str | None = None
-    group_name: str | None = None
-    birthdate: date | None = None
-    debut_date: date | None = None
-    artist_type: ArtistType | None = None
-    is_active: bool | None = None

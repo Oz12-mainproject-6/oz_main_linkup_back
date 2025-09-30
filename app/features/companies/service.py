@@ -6,7 +6,6 @@ from app.core.exceptions import NotFoundError, UploadFailedError, ValidationErro
 from app.core.s3 import s3_handler
 from app.features.artists.models import Artist, ArtistType
 from app.features.companies.schemas import (
-    ArtistUpdateRequest,
     CompanyDashboardResponse,
     DashboardArtistInfo,
     DashboardEventInfo,
@@ -388,28 +387,6 @@ class CompanyService:
             "banner_image_url": banner_url,
         }
 
-    @staticmethod
-    async def update_artist(
-        company: Company, artist_id: int, request: ArtistUpdateRequest
-    ) -> dict[str, str]:
-        artist = await Artist.get_or_none(id=artist_id, company=company)
-        if not artist:
-            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
-
-        # 이메일 중복 체크 (자신 제외)
-        if request.email and request.email != artist.email:
-            existing_artist = await Artist.filter(email=request.email).first()
-            if existing_artist:
-                raise ValidationError("이미 등록된 이메일입니다.")
-
-        # 수정할 필드만 업데이트
-        update_data = request.dict(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(artist, field, value)
-
-        await artist.save()
-
-        return {"message": "아티스트 정보가 수정되었습니다."}
 
     @staticmethod
     async def delete_artist(company: Company, artist_id: int) -> dict[str, str]:
