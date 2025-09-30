@@ -47,7 +47,6 @@ async def get_idol_list(
             | models.Q(group_name__icontains=artist_name)
         )
 
-
     # 총 개수 조회
     total = await query.count()
 
