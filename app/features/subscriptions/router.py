@@ -48,55 +48,61 @@ async def create_subscription(
             existing_subscription.is_active = True
             existing_subscription.subscription_type = SubscriptionType.DIRECT
             await existing_subscription.save()
-            return {"detail": "구독이 재활성화되었습니다."}
+            # 그룹 재구독 시에도 멤버들의 상속 구독 재활성화 필요
+            is_resubscription = True
     else:
         # 새로운 구독 생성 (직접 구독)
         await Subscription.create(
             user=current_user, artist=artist, subscription_type=SubscriptionType.DIRECT
         )
+        is_resubscription = False
 
-        # 그룹을 구독한 경우, 해당 그룹의 멤버들도 자동 구독
-        if artist.artist_type == ArtistType.GROUP:
-            # parent_group 관계를 사용하여 멤버들 조회 (더 정확함)
+    # 그룹을 구독한 경우, 해당 그룹의 멤버들도 자동 구독
+    if artist.artist_type == ArtistType.GROUP:
+        # parent_group 관계를 사용하여 멤버들 조회 (더 정확함)
+        group_members = await Artist.filter(
+            parent_group=artist,
+            artist_type=ArtistType.INDIVIDUAL,
+            is_active=True,
+        )
+
+        # parent_group이 설정되지 않은 경우 group_name으로 fallback
+        if not group_members and artist.group_name:
             group_members = await Artist.filter(
-                parent_group=artist,
+                group_name=artist.group_name,
                 artist_type=ArtistType.INDIVIDUAL,
                 is_active=True,
             )
 
-            # parent_group이 설정되지 않은 경우 group_name으로 fallback
-            if not group_members and artist.group_name:
-                group_members = await Artist.filter(
-                    group_name=artist.group_name,
-                    artist_type=ArtistType.INDIVIDUAL,
-                    is_active=True,
+        # 각 멤버에 대해 상속 구독 생성
+        for member in group_members:
+            # 이미 구독 중인지 확인
+            existing_member_sub = await Subscription.filter(
+                user=current_user, artist=member
+            ).first()
+
+            if not existing_member_sub:
+                # 상속 구독 생성
+                await Subscription.create(
+                    user=current_user,
+                    artist=member,
+                    subscription_type=SubscriptionType.INHERITED,
                 )
-
-            # 각 멤버에 대해 상속 구독 생성
-            for member in group_members:
-                # 이미 구독 중인지 확인
-                existing_member_sub = await Subscription.filter(
-                    user=current_user, artist=member
-                ).first()
-
-                if not existing_member_sub:
-                    # 상속 구독 생성
-                    await Subscription.create(
-                        user=current_user,
-                        artist=member,
-                        subscription_type=SubscriptionType.INHERITED,
+            elif not existing_member_sub.is_active:
+                # 비활성 구독이 있으면 상속으로 활성화 (DIRECT였으면 유지)
+                existing_member_sub.is_active = True
+                if existing_member_sub.subscription_type != SubscriptionType.DIRECT:
+                    existing_member_sub.subscription_type = (
+                        SubscriptionType.INHERITED
                     )
-                elif not existing_member_sub.is_active:
-                    # 비활성 구독이 있으면 상속으로 활성화 (DIRECT였으면 유지)
-                    existing_member_sub.is_active = True
-                    if existing_member_sub.subscription_type != SubscriptionType.DIRECT:
-                        existing_member_sub.subscription_type = (
-                            SubscriptionType.INHERITED
-                        )
-                    await existing_member_sub.save()
-                # 이미 활성화된 구독이 있다면 (DIRECT든 INHERITED든) 건드리지 않음
+                await existing_member_sub.save()
+            # 이미 활성화된 구독이 있다면 (DIRECT든 INHERITED든) 건드리지 않음
 
-    return {"detail": "구독이 완료되었습니다."}
+    # 구독 완료 메시지 결정
+    if is_resubscription:
+        return {"detail": "구독이 재활성화되었습니다."}
+    else:
+        return {"detail": "구독이 완료되었습니다."}
 
 
 @subscriptions_router.get("/")
