@@ -161,14 +161,14 @@ async def list_subscriptions(
         return result
 
 
-@subscriptions_router.delete("/{subscription_id}", response_model=dict)
+@subscriptions_router.delete("/{artist_id}", response_model=dict)
 async def cancel_subscription(
-    subscription_id: int, current_user: User = Depends(get_current_fan_user)
+    artist_id: int, current_user: User = Depends(get_current_fan_user)
 ):
     """구독 취소"""
     try:
         sub = await Subscription.get(
-            id=subscription_id, user=current_user, is_active=True
+            artist_id=artist_id, user=current_user, is_active=True
         )
         artist = await sub.artist
 

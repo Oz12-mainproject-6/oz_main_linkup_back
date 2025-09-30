@@ -7,7 +7,7 @@ from app.config import TORTOISE_ORM
 from app.features.artists.models import Artist, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
-from app.features.notifications.models import Subscription
+from app.features.notifications.models import Subscription, SubscriptionType
 from app.features.posts.models import Comment, Like, Post
 from app.features.users.auth import get_password_hash
 from app.features.users.models import Company, User, UserType
@@ -259,7 +259,7 @@ async def create_dummy_data():
         for fan in fan_users:
             for _i, artist in enumerate(artists[:3]):  # 각 팬이 3명 구독
                 subscription = await Subscription.create(
-                    user=fan, artist=artist, is_active=True
+                    user=fan, artist=artist, is_active=True, subscription_type=SubscriptionType.DIRECT
                 )
                 subscriptions.append(subscription)
         print(f"✅ 구독 관계 {len(subscriptions)}개 생성 완료")
