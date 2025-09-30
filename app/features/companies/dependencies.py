@@ -1,8 +1,8 @@
 from fastapi import Depends
 
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import Company, User, UserType
-from app.core.exceptions import ForbiddenError, NotFoundError
 
 
 async def get_current_company_user(

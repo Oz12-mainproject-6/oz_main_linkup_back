@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 
 from fastapi import UploadFile
 
+from app.core.exceptions import NotFoundError, UploadFailedError, ValidationError
 from app.core.s3 import s3_handler
 from app.features.artists.models import Artist, ArtistType
 from app.features.companies.schemas import (
@@ -16,7 +17,6 @@ from app.features.companies.schemas import (
 from app.features.events.models import Events
 from app.features.images.models import ImageType, SharedImage
 from app.features.users.models import Company, User
-from app.core.exceptions import NotFoundError, ValidationError, UploadFailedError
 
 
 class CompanyService:
@@ -94,10 +94,7 @@ class CompanyService:
             # 해당 아티스트가 본인 소속사 것인지 확인
             artist = await Artist.get_or_none(id=artist_id, company=company)
             if not artist:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="해당 아티스트를 찾을 수 없습니다.",
-                )
+                raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
             query = query.filter(artist_id=artist_id)
 
         events = (
@@ -136,10 +133,7 @@ class CompanyService:
         # 해당 아티스트가 본인 소속사 것인지 확인
         artist = await Artist.get_or_none(id=request.artist_id, company=company)
         if not artist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 아티스트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
 
         event = await Events.create(
             artist=artist,
@@ -181,10 +175,7 @@ class CompanyService:
         )
 
         if not event:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 이벤트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 이벤트를 찾을 수 없습니다.")
 
         # 수정할 필드만 업데이트
         update_data = request.dict(exclude_unset=True)
@@ -220,10 +211,7 @@ class CompanyService:
         ).first()
 
         if not event:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 이벤트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 이벤트를 찾을 수 없습니다.")
 
         # Soft delete
         event.is_active = False
@@ -266,10 +254,7 @@ class CompanyService:
         # 해당 아티스트가 본인 소속사 것인지 확인
         artist = await Artist.get_or_none(id=artist_id, company=company)
         if not artist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 아티스트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
 
         # 각 타입별 이미지 조회
         face_image = await SharedImage.filter(
@@ -312,13 +297,10 @@ class CompanyService:
     ) -> dict[str, str | int | None]:
         # stage_name 또는 group_name 중 하나는 필수
         if not stage_name and not group_name:
-            raise HTTPException(
-                status_code=400,
-                detail="stage_name 또는 group_name 중 하나는 필수입니다",
-            )
+            raise ValidationError("stage_name 또는 group_name 중 하나는 필수입니다")
         # artist_type과 parent_group 자동 설정
         parent_group = None
-        
+
         if group_name and not stage_name:
             # 그룹 (에스파)
             artist_type = ArtistType.GROUP
@@ -327,9 +309,7 @@ class CompanyService:
             artist_type = ArtistType.INDIVIDUAL
             # 같은 group_name을 가진 GROUP 찾기
             parent_group = await Artist.filter(
-                group_name=group_name,
-                artist_type=ArtistType.GROUP,
-                is_active=True
+                group_name=group_name, artist_type=ArtistType.GROUP, is_active=True
             ).first()
         else:
             # 솔로 아티스트 (아이유)
@@ -397,9 +377,7 @@ class CompanyService:
         except Exception as e:
             # 이미지 업로드 실패 시 아티스트도 삭제
             await artist.delete()
-            raise HTTPException(
-                status_code=500, detail=f"이미지 업로드 실패: {str(e)}"
-            ) from e
+            raise UploadFailedError(f"이미지 업로드 실패: {str(e)}") from e
 
         return {
             "message": "아티스트 및 이미지가 성공적으로 생성되었습니다.",
@@ -416,19 +394,13 @@ class CompanyService:
     ) -> dict[str, str]:
         artist = await Artist.get_or_none(id=artist_id, company=company)
         if not artist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 아티스트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
 
         # 이메일 중복 체크 (자신 제외)
         if request.email and request.email != artist.email:
             existing_artist = await Artist.filter(email=request.email).first()
             if existing_artist:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="이미 등록된 이메일입니다.",
-                )
+                raise ValidationError("이미 등록된 이메일입니다.")
 
         # 수정할 필드만 업데이트
         update_data = request.dict(exclude_unset=True)
@@ -443,10 +415,7 @@ class CompanyService:
     async def delete_artist(company: Company, artist_id: int) -> dict[str, str]:
         artist = await Artist.get_or_none(id=artist_id, company=company, is_active=True)
         if not artist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 아티스트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
 
         # 관련 이벤트도 함께 비활성화
         await Events.filter(artist=artist, is_active=True).update(is_active=False)
@@ -476,20 +445,14 @@ class CompanyService:
         # 아티스트 조회 및 권한 확인
         artist = await Artist.get_or_none(id=artist_id, company=company)
         if not artist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 아티스트를 찾을 수 없습니다.",
-            )
+            raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
 
         # stage_name 또는 group_name 중 하나는 필수 (업데이트 후 기준)
         final_stage_name = stage_name if stage_name is not None else artist.stage_name
         final_group_name = group_name if group_name is not None else artist.group_name
 
         if not final_stage_name and not final_group_name:
-            raise HTTPException(
-                status_code=400,
-                detail="stage_name 또는 group_name 중 하나는 필수입니다",
-            )
+            raise ValidationError("stage_name 또는 group_name 중 하나는 필수입니다")
 
         # 아티스트 정보 업데이트 (None이 아닌 값만)
         if stage_name is not None:

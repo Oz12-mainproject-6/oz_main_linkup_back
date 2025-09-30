@@ -3,8 +3,8 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
-from starlette.status import HTTP_404_NOT_FOUND
 
+from app.core.exceptions import FileProcessingError, NotFoundError, ValidationError
 from app.external.scrapping import fetch_myloveidol_json, get_myloveidol_schedule
 from app.features.events.models import EventCategory, EventVisibility
 from app.features.events.schemas import (
@@ -18,7 +18,6 @@ from app.features.events.services import EventCRUD, EventService, notification_s
 from app.features.notifications.models import Subscription
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
-from app.core.exceptions import ValidationError, NotFoundError, FileProcessingError
 
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 

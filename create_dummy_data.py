@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from tortoise import Tortoise
 
 from app.config import TORTOISE_ORM
-from app.features.artists.models import Artist, ArtistRole, ArtistType
+from app.features.artists.models import Artist, ArtistType
 from app.features.events.models import EventCategory, Events
 from app.features.images.models import ImageType, SharedImage
 from app.features.notifications.models import Subscription
@@ -112,17 +112,17 @@ async def create_dummy_data():
         # 5. 아티스트 생성 (그룹 + 멤버들)
         print("🎤 아티스트 생성 중...")
         artists = []
-        
+
         # 5-1. 그룹 생성 (group_name만 있고 stage_name 없음)
         print("👥 그룹 생성 중...")
         group_data = [
-            ("에스파", "aespa_dummy@sm.com", 0, 4),      # SM, 4명
-            ("블랙핑크", "bp_dummy@yg.com", 1, 4),        # YG, 4명  
-            ("트와이스", "twice_dummy@jyp.com", 2, 9),    # JYP, 9명
-            ("뉴진스", "nj_dummy@sm.com", 0, 5),          # SM, 5명
-            ("아이브", "ive_dummy@yg.com", 1, 6),         # YG, 6명
+            ("에스파", "aespa_dummy@sm.com", 0, 4),  # SM, 4명
+            ("블랙핑크", "bp_dummy@yg.com", 1, 4),  # YG, 4명
+            ("트와이스", "twice_dummy@jyp.com", 2, 9),  # JYP, 9명
+            ("뉴진스", "nj_dummy@sm.com", 0, 5),  # SM, 5명
+            ("아이브", "ive_dummy@yg.com", 1, 6),  # YG, 6명
         ]
-        
+
         groups = []
         for group_name, email, company_idx, member_count in group_data:
             group = await Artist.create(
@@ -137,7 +137,7 @@ async def create_dummy_data():
             groups.append(group)
             artists.append(group)
         print(f"✅ 그룹 {len(groups)}개 생성 완료")
-        
+
         # 5-2. 그룹 멤버 생성 (group_name + stage_name 모두 있음)
         print("🌟 그룹 멤버 생성 중...")
         member_data = [
@@ -146,27 +146,23 @@ async def create_dummy_data():
             ("윈터", "에스파", "winter_dummy@sm.com", 0),
             ("지젤", "에스파", "giselle_dummy@sm.com", 0),
             ("닝닝", "에스파", "ningning_dummy@sm.com", 0),
-            
-            # 블랙핑크 멤버들  
+            # 블랙핑크 멤버들
             ("제니", "블랙핑크", "jennie_dummy@yg.com", 1),
             ("리사", "블랙핑크", "lisa_dummy@yg.com", 1),
             ("로제", "블랙핑크", "rose_dummy@yg.com", 1),
             ("지수", "블랙핑크", "jisoo_dummy@yg.com", 1),
-            
             # 트와이스 멤버들 (일부만)
             ("나연", "트와이스", "nayeon_dummy@jyp.com", 2),
             ("정연", "트와이스", "jeongyeon_dummy@jyp.com", 2),
             ("모모", "트와이스", "momo_dummy@jyp.com", 2),
             ("사나", "트와이스", "sana_dummy@jyp.com", 2),
             ("지효", "트와이스", "jihyo_dummy@jyp.com", 2),
-            
             # 뉴진스 멤버들
             ("민지", "뉴진스", "minji_dummy@sm.com", 0),
             ("하니", "뉴진스", "hani_dummy@sm.com", 0),
             ("다니엘", "뉴진스", "danielle_dummy@sm.com", 0),
             ("해린", "뉴진스", "haerin_dummy@sm.com", 0),
             ("혜인", "뉴진스", "hyein_dummy@sm.com", 0),
-            
             # 아이브 멤버들
             ("안유진", "아이브", "yujin_dummy@yg.com", 1),
             ("가을", "아이브", "gaeul_dummy@yg.com", 1),
@@ -175,12 +171,12 @@ async def create_dummy_data():
             ("리즈", "아이브", "liz_dummy@yg.com", 1),
             ("이서", "아이브", "leeseo_dummy@yg.com", 1),
         ]
-        
+
         members = []
         for stage_name, group_name, email, company_idx in member_data:
             # parent_group 찾기 (같은 group_name을 가진 GROUP 타입)
             parent_group = next(g for g in groups if g.group_name == group_name)
-            
+
             member = await Artist.create(
                 company=companies[company_idx],
                 stage_name=stage_name,
@@ -195,17 +191,17 @@ async def create_dummy_data():
             members.append(member)
             artists.append(member)
         print(f"✅ 그룹 멤버 {len(members)}개 생성 완료")
-        
+
         # 5-3. 솔로 아티스트 생성 (stage_name만 있음)
         print("🎭 솔로 아티스트 생성 중...")
         solo_data = [
             ("아이유", "iu_dummy@kakao.com", 0),
-            ("태연", "taeyeon_dummy@sm.com", 0), 
+            ("태연", "taeyeon_dummy@sm.com", 0),
             ("청하", "chungha_dummy@yg.com", 1),
             ("선미", "sunmi_dummy@jyp.com", 2),
             ("화사", "hwasa_dummy@yg.com", 1),
         ]
-        
+
         solos = []
         for stage_name, email, company_idx in solo_data:
             solo = await Artist.create(
@@ -215,15 +211,18 @@ async def create_dummy_data():
                 email=email,
                 artist_type=ArtistType.INDIVIDUAL,
                 # parent_group=None (솔로는 부모 그룹 없음)
-                debut_date=datetime.now().date() - timedelta(days=365 * 5),  # 5년 전 데뷔
+                debut_date=datetime.now().date()
+                - timedelta(days=365 * 5),  # 5년 전 데뷔
                 birthdate=datetime.now().date() - timedelta(days=365 * 25),  # 25살
                 is_active=True,
             )
             solos.append(solo)
             artists.append(solo)
         print(f"✅ 솔로 아티스트 {len(solos)}개 생성 완료")
-        
-        print(f"🎉 총 아티스트 {len(artists)}개 생성 완료 (그룹: {len(groups)}, 멤버: {len(members)}, 솔로: {len(solos)})")
+
+        print(
+            f"🎉 총 아티스트 {len(artists)}개 생성 완료 (그룹: {len(groups)}, 멤버: {len(members)}, 솔로: {len(solos)})"
+        )
 
         # 6. 이벤트 생성
         print("📅 이벤트 생성 중...")

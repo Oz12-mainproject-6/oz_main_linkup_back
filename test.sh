@@ -41,14 +41,8 @@ echo
 run_check "Ruff check (linting)" "uv run ruff check ."
 run_check "Ruff format check" "uv run ruff format --check ."
 
-# MyPy check (but more lenient for development)
-echo -e "${YELLOW}Running MyPy type check (lenient mode)...${NC}"
-if uv run mypy . --ignore-missing-imports --disable-error-code=var-annotated,name-defined,call-arg 2>/dev/null; then
-    echo -e "${GREEN}✅ MyPy type check passed${NC}"
-else
-    echo -e "${YELLOW}⚠️  MyPy found issues but continuing (development mode)${NC}"
-fi
-echo
+# MyPy type checking
+run_check "MyPy type check" "uv run mypy app --ignore-missing-imports --no-implicit-optional --warn-return-any --warn-unused-ignores"
 
 # Create tests directory if it doesn't exist
 if [ ! -d "tests" ]; then

@@ -10,6 +10,11 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
+from app.core.exceptions import (
+    FileProcessingError,
+    InternalServerError,
+    ValidationError,
+)
 from app.features.artists.models import ArtistType
 from app.features.companies.dependencies import get_current_company_user
 from app.features.companies.schemas import (
@@ -22,7 +27,6 @@ from app.features.companies.schemas import (
 from app.features.companies.service import CompanyService
 from app.features.events.services import EventCRUD, EventService, notification_service
 from app.features.users.models import Company, User
-from app.core.exceptions import InternalServerError, ValidationError, FileProcessingError
 
 companies_router = APIRouter(prefix="/api/companies", tags=["companies"])
 

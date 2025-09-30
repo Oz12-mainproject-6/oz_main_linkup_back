@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from tortoise import models
 from tortoise.functions import Count
 
+from app.core.exceptions import ArtistNotFoundError
 from app.features.artists.models import Artist
 from app.features.artists.schemas import (
     ArtistListPaginationResponse,
@@ -13,7 +14,6 @@ from app.features.images.models import ImageType, SharedImage
 from app.features.notifications.models import Subscription
 from app.features.users.dependencies import get_current_user
 from app.features.users.models import User
-from app.core.exceptions import ArtistNotFoundError
 
 idol_router = APIRouter(prefix="/api/idol", tags=["idol"])
 

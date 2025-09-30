@@ -12,10 +12,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from tortoise.exceptions import DoesNotExist
 
+from app.core.exceptions import FileProcessingError, ValidationError
 from app.features.artists.models import Artist
 from app.features.events.models import EventCategory, Events, EventVisibility
 from app.features.events.schemas import FileUploadResponse
-from app.core.exceptions import FileProcessingError, ValidationError
 
 
 # author : Juwon
@@ -246,9 +246,7 @@ class EventService:
             )
 
         except Exception as e:
-            raise HTTPException(
-                status_code=400, detail=f"File processing error: {str(e)}"
-            ) from e
+            raise FileProcessingError(f"File processing error: {str(e)}") from e
 
     @staticmethod
     async def generate_artist_template() -> BinaryIO:
@@ -842,9 +840,7 @@ async def import_scraped_events(
 
     except Exception as e:
         logger.error(f"Scraped events import error: {str(e)}")
-        raise HTTPException(
-            status_code=400, detail=f"Import processing error: {str(e)}"
-        ) from e
+        raise ValidationError(f"Import processing error: {str(e)}") from e
 
 
 @staticmethod

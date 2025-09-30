@@ -1,9 +1,9 @@
 from fastapi import UploadFile
 
+from app.core.exceptions import InvalidFileTypeError, UploadFailedError
 from app.core.s3 import s3_handler
 from app.features.images.models import SharedImage
 from app.shared.utils import validate_image_extension
-from app.core.exceptions import InvalidFileTypeError, UploadFailedError
 
 
 class ImageService:

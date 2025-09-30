@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 
+from app.core.exceptions import ArtistNotFoundError, UploadFailedError
 from app.core.s3 import S3Folders, s3_handler
 from app.features.artists.models import Artist
 from app.features.images.models import ImageType, SharedImage
 from app.features.users.dependencies import get_current_company_user, get_current_user
 from app.features.users.models import User
-from app.core.exceptions import ArtistNotFoundError, UploadFailedError
 
 uploads_router = APIRouter(prefix="/api/uploads", tags=["Uploads"])
 

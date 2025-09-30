@@ -1,14 +1,14 @@
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.features.users.auth import verify_token
-from app.features.users.models import User
 from app.core.exceptions import (
-    UnauthorizedError,
+    ForbiddenError,
     InvalidTokenError,
     NotFoundError,
-    ForbiddenError,
+    UnauthorizedError,
 )
+from app.features.users.auth import verify_token
+from app.features.users.models import User
 
 security = HTTPBearer()
 

@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, Query
 from tortoise.exceptions import DoesNotExist
 
-from app.features.artists.models import Artist, ArtistType
-from app.features.images.models import ImageType, SharedImage
-from app.features.notifications.models import Subscription, SubscriptionType
-from app.features.users.dependencies import get_current_fan_user
-from app.features.users.models import User
 from app.core.exceptions import (
     ArtistNotFoundError,
     DuplicateSubscriptionError,
     NotFoundError,
     ValidationError,
 )
+from app.features.artists.models import Artist, ArtistType
+from app.features.images.models import ImageType, SharedImage
+from app.features.notifications.models import Subscription, SubscriptionType
+from app.features.users.dependencies import get_current_fan_user
+from app.features.users.models import User
 
 from .schemas import SubscriptionCreate, SubscriptionOut, SubscriptionWithImageOut
 
@@ -63,7 +63,7 @@ async def create_subscription(
                 artist_type=ArtistType.INDIVIDUAL,
                 is_active=True,
             )
-            
+
             # parent_group이 설정되지 않은 경우 group_name으로 fallback
             if not group_members and artist.group_name:
                 group_members = await Artist.filter(
@@ -167,12 +167,16 @@ async def cancel_subscription(
 ):
     """구독 취소"""
     try:
-        sub = await Subscription.get(id=subscription_id, user=current_user, is_active=True)
+        sub = await Subscription.get(
+            id=subscription_id, user=current_user, is_active=True
+        )
         artist = await sub.artist
 
         # INHERITED 구독은 직접 취소 불가
         if sub.subscription_type == SubscriptionType.INHERITED:
-            raise ValidationError("상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요.")
+            raise ValidationError(
+                "상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요."
+            )
 
         # 구독 취소
         sub.is_active = False
@@ -191,7 +195,7 @@ async def cancel_subscription(
                 artist__parent_group=artist,
                 artist__artist_type=ArtistType.INDIVIDUAL,
             )
-            
+
             # parent_group이 설정되지 않은 경우 group_name으로 fallback
             if not inherited_subscriptions and artist.group_name:
                 inherited_subscriptions = await Subscription.filter(
