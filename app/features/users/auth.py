@@ -10,7 +10,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "10080")
 )  # 7 days default
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
