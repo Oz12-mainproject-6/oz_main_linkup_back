@@ -101,59 +101,6 @@ async def get_idol_list(
         has_next=has_next,
     )
 
-
-@idol_router.get("/{artist_name}", response_model=ArtistResponse)
-async def get_idol_detail(artist_name: str):
-    """아이돌 상세 조회 (실명 또는 예명으로 검색, 활성 상태만)"""
-
-    # 예명/그룹명으로 정확 검색 + 부분 검색 (활성 상태만)
-    artist = await Artist.filter(
-        models.Q(stage_name__iexact=artist_name)
-        | models.Q(group_name__iexact=artist_name)
-        | models.Q(stage_name__icontains=artist_name)
-        | models.Q(group_name__icontains=artist_name),
-        is_active=True,
-    ).first()
-
-    if not artist:
-        raise ArtistNotFoundError(f"아티스트 '{artist_name}'을 찾을 수 없습니다.")
-
-    # 프로필 이미지 조회 (FACE 타입 우선)
-    profile_image_url = None
-    face_image = await SharedImage.filter(
-        artist=artist, image_type=ImageType.FACE
-    ).first()
-
-    if face_image:
-        profile_image_url = face_image.url
-    else:
-        # FACE가 없으면 TORSO 이미지 조회
-        torso_image = await SharedImage.filter(
-            artist=artist, image_type=ImageType.TORSO
-        ).first()
-        if torso_image:
-            profile_image_url = torso_image.url
-
-    return ArtistResponse(
-        id=artist.id,
-        stage_name=artist.stage_name,
-        group_name=artist.group_name,
-        birthdate=artist.birthdate,
-        gender=artist.gender,
-        role=artist.role,
-        mbti=artist.mbti,
-        height=artist.height,
-        nickname=artist.nickname,
-        debut_date=artist.debut_date,
-        artist_type=artist.artist_type,
-        member_count=artist.member_count,
-        is_active=artist.is_active,
-        profile_image=profile_image_url,
-        created_at=artist.created_at.isoformat() if artist.created_at else None,
-        updated_at=artist.updated_at.isoformat() if artist.updated_at else None,
-    )
-
-
 @idol_router.get("/subscribed", response_model=ArtistListPaginationResponse)
 async def get_subscribed_artists(
     limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
