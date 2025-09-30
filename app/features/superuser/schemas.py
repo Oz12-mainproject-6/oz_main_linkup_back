@@ -26,6 +26,7 @@ class PostSummaryResponse(BaseModel):
     created_at: datetime
     user_nickname: str | None
     user_id: int
+    post_images: list[str] | None = None  # 포스트 첨부 이미지 URL 목록
 
 
 class CommentSummaryResponse(BaseModel):

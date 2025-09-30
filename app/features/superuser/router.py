@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.features.posts.models import Comment, Like, Post
+from app.features.images.models import ImageType, SharedImage
 from app.features.superuser.dependencies import get_superuser
 from app.features.superuser.schemas import (
     BanUserRequest,
@@ -86,6 +87,12 @@ async def get_all_posts(
         artist_name = (
             post.artist.stage_name or post.artist.group_name if post.artist else None
         )
+        
+        # 포스트에 첨부된 이미지들 조회 (ImageType.POST)
+        post_images = await SharedImage.filter(
+            post=post, image_type=ImageType.POST
+        ).values_list("url", flat=True)
+        
         post_responses.append(
             PostSummaryResponse(
                 id=post.id,
@@ -95,6 +102,7 @@ async def get_all_posts(
                 created_at=post.created_at,
                 user_nickname=post.user.nickname,
                 user_id=post.user.id,
+                post_images=list(post_images) if post_images else None,
             )
         )
 
