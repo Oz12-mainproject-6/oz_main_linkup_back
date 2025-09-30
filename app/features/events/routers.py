@@ -62,6 +62,55 @@ async def get_events(
     )
 
 
+@event_router.get("/subscribed", response_model=EventListResponse)
+async def get_subscribed_events(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    artist_parent_group: int | None = Query(None, description="그룹 ID"),
+    artist_id: int | None = Query(None, description="아티스트 id"),
+    category: EventCategory | None = Query(None, description="일정 종류"),
+    visibility: EventVisibility | None = Query(None, description="공개범위"),
+    start_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    end_date: str | None = Query(None, description="YYYY-MM-DD format"),
+    current_user: User = Depends(get_current_user),
+):
+    """구독 중인 아티스트의 이벤트 목록 조회 (로그인 필요)"""
+    try:
+        start_dt = datetime.fromisoformat(start_date) if start_date else None
+        end_dt = datetime.fromisoformat(end_date) if end_date else None
+
+    except ValueError as err:
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
+
+    # 구독 중인 아티스트 ID 조회
+    subscribed_artist_ids = await Subscription.filter(
+        user=current_user, is_active=True
+    ).values_list("artist_id", flat=True)
+
+    if not subscribed_artist_ids:
+        return EventListResponse(events=[], total=0, page=skip // limit + 1, size=limit)
+
+    events, total = await EventCRUD.get_list(
+        skip=skip,
+        limit=limit,
+        artist_parent_group=artist_parent_group,
+        artist_id=artist_id,
+        category=category,
+        visibility=visibility,
+        is_active=True,  # 활성 이벤트만 조회 (기본값)
+        start_date=start_dt,
+        end_date=end_dt,
+        subscribed_artist_ids=subscribed_artist_ids,  # 구독 필터링 적용
+    )
+
+    return EventListResponse(
+        events=events,
+        total=total,
+        page=skip // limit + 1,
+        size=limit,
+    )
+
+
 @event_router.get("/{event_id}", response_model=EventResponse)
 async def get_event(event_id: int):
     """이벤트 상세 조회"""
@@ -247,55 +296,6 @@ async def import_myloveidol_events(
     except Exception as e:
         logger.error(f"MyLoveIdol import error: {str(e)}")
         raise ValidationError(f"Import error: {str(e)}") from e
-
-
-@event_router.get("/subscribed", response_model=EventListResponse)
-async def get_subscribed_events(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    artist_parent_group: int | None = Query(None, description="그룹 ID"),
-    artist_id: int | None = Query(None, description="아티스트 id"),
-    category: EventCategory | None = Query(None, description="일정 종류"),
-    visibility: EventVisibility | None = Query(None, description="공개범위"),
-    start_date: str | None = Query(None, description="YYYY-MM-DD format"),
-    end_date: str | None = Query(None, description="YYYY-MM-DD format"),
-    current_user: User = Depends(get_current_user),
-):
-    """구독 중인 아티스트의 이벤트 목록 조회 (로그인 필요)"""
-    try:
-        start_dt = datetime.fromisoformat(start_date) if start_date else None
-        end_dt = datetime.fromisoformat(end_date) if end_date else None
-
-    except ValueError as err:
-        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
-
-    # 구독 중인 아티스트 ID 조회
-    subscribed_artist_ids = await Subscription.filter(
-        user=current_user, is_active=True
-    ).values_list("artist_id", flat=True)
-
-    if not subscribed_artist_ids:
-        return EventListResponse(events=[], total=0, page=skip // limit + 1, size=limit)
-
-    events, total = await EventCRUD.get_list(
-        skip=skip,
-        limit=limit,
-        artist_parent_group=artist_parent_group,
-        artist_id=artist_id,
-        category=category,
-        visibility=visibility,
-        is_active=True,  # 활성 이벤트만 조회 (기본값)
-        start_date=start_dt,
-        end_date=end_dt,
-        subscribed_artist_ids=subscribed_artist_ids,  # 구독 필터링 적용
-    )
-
-    return EventListResponse(
-        events=events,
-        total=total,
-        page=skip // limit + 1,
-        size=limit,
-    )
 
 
 @event_router.get("/events/calendar/", response_model=list[EventOut])
