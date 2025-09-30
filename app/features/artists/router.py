@@ -26,12 +26,8 @@ async def get_idol_list(
     artist_name: str | None = Query(
         None, description="아티스트 이름 필터 (group_name/stage_name)"
     ),
-    is_active: bool | None = Query(
-        None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
-    ),
     limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
     page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
-    current_user: User | None = Depends(get_current_user),
 ):
     """아이돌 리스트 조회 (활성 상태만)"""
 
@@ -51,12 +47,6 @@ async def get_idol_list(
             | models.Q(group_name__icontains=artist_name)
         )
 
-    # 구독 중인 아티스트만 필터링 (로그인된 사용자만)
-    if is_active and current_user:
-        subscribed_artist_ids = await Subscription.filter(
-            user=current_user, is_active=True
-        ).values_list("artist_id", flat=True)
-        query = query.filter(id__in=subscribed_artist_ids)
 
     # 총 개수 조회
     total = await query.count()
@@ -162,6 +152,85 @@ async def get_idol_detail(artist_name: str):
         profile_image=profile_image_url,
         created_at=artist.created_at.isoformat() if artist.created_at else None,
         updated_at=artist.updated_at.isoformat() if artist.updated_at else None,
+    )
+
+
+@idol_router.get("/subscribed", response_model=ArtistListPaginationResponse)
+async def get_subscribed_artists(
+    limit: int = Query(20, ge=1, le=100, description="조회할 아티스트 수"),
+    page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
+    current_user: User = Depends(get_current_user),
+):
+    """구독 중인 아티스트 리스트 조회 (로그인 필요)"""
+
+    # offset 계산
+    offset = (page - 1) * limit
+
+    # 구독 중인 아티스트 ID 조회
+    subscribed_artist_ids = await Subscription.filter(
+        user=current_user, is_active=True
+    ).values_list("artist_id", flat=True)
+
+    if not subscribed_artist_ids:
+        return ArtistListPaginationResponse(
+            artists=[], total=0, page=page, limit=limit, has_next=False
+        )
+
+    # 구독 중인 아티스트만 필터링 (활성 상태만)
+    query = Artist.filter(id__in=subscribed_artist_ids, is_active=True)
+
+    # 총 개수 조회
+    total = await query.count()
+
+    # 인기도 정렬 (구독자 수 기준) + 페이징
+    artists = (
+        await query.annotate(subscriber_count=Count("subscribers"))
+        .order_by("-subscriber_count", "-created_at")
+        .offset(offset)
+        .limit(limit)
+    )
+
+    # 각 아티스트의 모든 이미지 URL 조회
+    artist_list = []
+    for artist in artists:
+        # 모든 이미지 타입 조회
+        face_image = await SharedImage.filter(
+            artist=artist, image_type=ImageType.FACE
+        ).first()
+        torso_image = await SharedImage.filter(
+            artist=artist, image_type=ImageType.TORSO
+        ).first()
+        banner_image = await SharedImage.filter(
+            artist=artist, image_type=ImageType.BANNER
+        ).first()
+
+        # 프로필 이미지는 FACE 우선, 없으면 TORSO 사용 (호환성을 위해)
+        profile_image_url = None
+        if face_image:
+            profile_image_url = face_image.url
+        elif torso_image:
+            profile_image_url = torso_image.url
+
+        artist_list.append(
+            ArtistListResponse(
+                id=artist.id,
+                name=artist.stage_name or artist.group_name or f"Artist {artist.id}",
+                profile_image=profile_image_url,
+                face_url=face_image.url if face_image else None,
+                torso_url=torso_image.url if torso_image else None,
+                banner_url=banner_image.url if banner_image else None,
+            )
+        )
+
+    # 다음 페이지 존재 여부
+    has_next = (offset + limit) < total
+
+    return ArtistListPaginationResponse(
+        artists=artist_list,
+        total=total,
+        page=page,
+        limit=limit,
+        has_next=has_next,
     )
 
 
