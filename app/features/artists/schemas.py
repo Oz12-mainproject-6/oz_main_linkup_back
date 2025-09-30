@@ -16,6 +16,9 @@ class ArtistResponse(BaseModel):
     artist_type: ArtistType
     is_active: bool
     profile_image: str | None = None
+    face_url: str | None = None
+    torso_url: str | None = None
+    banner_url: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
