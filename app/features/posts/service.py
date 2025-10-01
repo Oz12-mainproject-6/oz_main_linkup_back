@@ -20,12 +20,16 @@ class PostService:
     @staticmethod
     async def get_likes_count(post: models.Post) -> int:
         """포스트 좋아요 수 조회 (탈퇴한 유저 제외)"""
-        return await models.Like.filter(post=post, user__deleted_at__isnull=True).count()
+        return await models.Like.filter(
+            post=post, user__deleted_at__isnull=True
+        ).count()
 
     @staticmethod
     async def get_comments_count(post: models.Post) -> int:
         """포스트 댓글 수 조회 (탈퇴한 유저 제외)"""
-        return await models.Comment.filter(post=post, user__deleted_at__isnull=True).count()
+        return await models.Comment.filter(
+            post=post, user__deleted_at__isnull=True
+        ).count()
 
     @staticmethod
     async def build_post_response(post: models.Post) -> schemas.PostResponse:
@@ -142,7 +146,9 @@ class PostService:
     ) -> list[schemas.PostResponse]:
         """포스트 목록 조회"""
         # 탈퇴한 유저의 포스트 제외
-        query = models.Post.filter(user__deleted_at__isnull=True).prefetch_related("user", "artist")
+        query = models.Post.filter(user__deleted_at__isnull=True).prefetch_related(
+            "user", "artist"
+        )
 
         if is_active:
             subscribed_artist_ids = await Subscription.filter(

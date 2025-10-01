@@ -43,7 +43,7 @@ async def get_users(
         display_email = user.email
         if user.deleted_at:
             display_email = f"[탈퇴] {user.original_email or user.email}"
-        
+
         user_list.append(
             UserDetailResponse(
                 id=user.id,

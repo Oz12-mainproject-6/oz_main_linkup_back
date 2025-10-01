@@ -33,17 +33,23 @@ class UserService:
     async def signup(request: SignupRequest) -> UserResponse:
         """회원가입 처리"""
         # 활성 계정 확인
-        existing_active_user = await User.filter(email=request.email, deleted_at__isnull=True).first()
+        existing_active_user = await User.filter(
+            email=request.email, deleted_at__isnull=True
+        ).first()
         if existing_active_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 등록된 이메일입니다.",
             )
-        
+
         # 탈퇴한 계정 확인 (original_email로 찾기)
-        existing_deleted_user = await User.filter(original_email=request.email, deleted_at__isnull=False).first()
+        existing_deleted_user = await User.filter(
+            original_email=request.email, deleted_at__isnull=False
+        ).first()
         if existing_deleted_user:
-            return await UserService._reactivate_deleted_account(existing_deleted_user, request)
+            return await UserService._reactivate_deleted_account(
+                existing_deleted_user, request
+            )
 
         # 이메일 인증 코드 확인
         verification = await EmailVerification.filter(

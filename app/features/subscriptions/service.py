@@ -4,7 +4,6 @@ from app.core.exceptions import (
     ArtistNotFoundError,
     DuplicateSubscriptionError,
     NotFoundError,
-    ValidationError,
 )
 from app.features.artists.models import Artist, ArtistType
 from app.features.images.models import ImageType, SharedImage
@@ -230,7 +229,6 @@ class SubscriptionService:
         try:
             sub = await Subscription.get(artist_id=artist_id, user=user, is_active=True)
             artist = await sub.artist
-
 
             # 구독 취소
             sub.is_active = False
