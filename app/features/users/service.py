@@ -366,8 +366,9 @@ class UserService:
                     user_info, user_type_enum
                 )
 
-            # 마지막 로그인 시간 업데이트
+            # 마지막 로그인 시간 업데이트 및 소셜 토큰 저장
             user.last_login_at = datetime.now(UTC)
+            user.oauth_access_token = access_token
             await user.save()
 
             # JWT 토큰 생성
@@ -474,6 +475,10 @@ class UserService:
                 detail="이미 탈퇴한 계정입니다.",
             )
 
+        # 소셜 로그인 사용자인 경우 토큰 폐기
+        if user.oauth_provider and user.oauth_access_token:
+            await UserService.revoke_social_token(user)
+
         # 이메일 마스킹 처리
         masked_email = await UserService._mask_email_for_deletion(user.id, user.email)
 
@@ -537,3 +542,44 @@ class UserService:
             oauth_provider=existing_user.oauth_provider,
             is_email_verified=existing_user.is_email_verified,
         )
+
+    @staticmethod
+    async def revoke_social_token(user: User) -> dict:
+        """소셜 로그인 토큰 폐기"""
+        if not user.oauth_provider or not user.oauth_access_token:
+            return {"message": "폐기할 소셜 토큰이 없습니다."}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                if user.oauth_provider == "kakao":
+                    # 카카오 토큰 폐기
+                    response = await client.post(
+                        "https://kapi.kakao.com/v1/user/unlink",
+                        headers={
+                            "Authorization": f"Bearer {user.oauth_access_token}",
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                    )
+                    
+                elif user.oauth_provider == "google":
+                    # 구글 토큰 폐기
+                    response = await client.post(
+                        f"https://oauth2.googleapis.com/revoke?token={user.oauth_access_token}",
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    )
+
+                # 토큰 폐기 성공 여부와 관계없이 DB에서 토큰 제거
+                user.oauth_access_token = None
+                await user.save()
+
+                if response.status_code == 200:
+                    return {"message": f"{user.oauth_provider} 토큰이 성공적으로 폐기되었습니다."}
+                else:
+                    return {"message": f"{user.oauth_provider} 토큰 폐기 요청을 보냈지만 응답이 예상과 다릅니다. DB에서는 제거되었습니다."}
+
+        except Exception as e:
+            # 오류가 발생해도 DB에서는 토큰 제거
+            user.oauth_access_token = None
+            await user.save()
+            print(f"소셜 토큰 폐기 오류: {str(e)}")
+            return {"message": f"토큰 폐기 중 오류가 발생했지만 DB에서는 제거되었습니다."}

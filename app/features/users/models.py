@@ -55,6 +55,9 @@ class User(TimestampMixin):
         max_length=50, null=True, description="소셜 로그인 제공자"
     )
     oauth_id = fields.CharField(max_length=200, null=True, description="소셜 로그인 ID")
+    oauth_access_token = fields.CharField(
+        max_length=500, null=True, description="소셜 로그인 액세스 토큰"
+    )
 
     # 이메일 인증
     is_email_verified = fields.BooleanField(

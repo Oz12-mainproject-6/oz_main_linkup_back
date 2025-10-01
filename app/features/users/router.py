@@ -81,7 +81,13 @@ async def google_callback(code: str, user_type: str = "fan"):
 
 
 @auth_router.post("/logout")
-async def logout():
+async def logout(current_user: User = Depends(get_current_user)):
+    """로그아웃 (소셜 토큰 폐기 포함)"""
+    # 소셜 로그인 사용자인 경우 토큰 폐기
+    if current_user.oauth_provider and current_user.oauth_access_token:
+        result = await UserService.revoke_social_token(current_user)
+        return result
+    
     return {"message": "로그아웃되었습니다."}
 
 
