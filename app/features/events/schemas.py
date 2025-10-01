@@ -85,7 +85,7 @@ class EventOut(BaseModel):
 
 class EventsQueryParams(BaseQueryParams):
     """이벤트 목록 조회 쿼리 파라미터"""
-    
+
     artist_parent_group: int | None = Field(None, description="그룹 ID")
     artist_id: int | None = Field(None, description="아티스트 ID")
     category: EventCategory | None = Field(None, description="일정 종류")
@@ -96,7 +96,7 @@ class EventsQueryParams(BaseQueryParams):
 
 class SubscribedEventsQueryParams(BaseQueryParams):
     """구독 이벤트 목록 조회 쿼리 파라미터"""
-    
+
     artist_parent_group: int | None = Field(None, description="그룹 ID")
     artist_id: int | None = Field(None, description="아티스트 ID")
     category: EventCategory | None = Field(None, description="일정 종류")
@@ -107,7 +107,7 @@ class SubscribedEventsQueryParams(BaseQueryParams):
 
 class DownloadEventsQueryParams(BaseModel):
     """이벤트 다운로드 쿼리 파라미터"""
-    
+
     artist_id: int | None = Field(None, description="아티스트 ID")
     category: EventCategory | None = Field(None, description="일정 종류")
     start_date: str | None = Field(None, description="YYYY-MM-DD format")
@@ -116,12 +116,14 @@ class DownloadEventsQueryParams(BaseModel):
 
 class ScrapeEventsQueryParams(BaseModel):
     """이벤트 스크래핑 쿼리 파라미터"""
-    
+
     locale: str = Field("ko", description="언어 설정")
-    artist_name: str | None = Field(None, description="솔로: stage_name, 그룹: group_name")
+    artist_name: str | None = Field(
+        None, description="솔로: stage_name, 그룹: group_name"
+    )
 
 
 class CalendarEventsQueryParams(BaseModel):
     """캘린더 이벤트 조회 쿼리 파라미터"""
-    
+
     artist_name: str | None = Field(None, description="아티스트 이름")

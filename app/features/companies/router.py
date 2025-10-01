@@ -5,7 +5,6 @@ from fastapi import (
     Depends,
     File,
     Form,
-    Query,
     UploadFile,
 )
 from fastapi.responses import StreamingResponse
@@ -49,7 +48,9 @@ async def get_company_events(
 ):
     """소속사 이벤트 목록 조회"""
     current_user, company = user_company
-    return await CompanyService.get_events(company, params.artist_id, params.limit, params.offset)
+    return await CompanyService.get_events(
+        company, params.artist_id, params.limit, params.offset
+    )
 
 
 @companies_router.post("/events", response_model=EventResponse)
@@ -91,7 +92,9 @@ async def get_company_artists(
 ):
     """소속사 아티스트 목록 조회"""
     current_user, company = user_company
-    return await CompanyService.get_artists(company, params.is_active, params.limit, params.offset)
+    return await CompanyService.get_artists(
+        company, params.is_active, params.limit, params.offset
+    )
 
 
 @companies_router.get("/artists/upload-template")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.features.users.dependencies import get_current_fan_user
 from app.features.users.models import User

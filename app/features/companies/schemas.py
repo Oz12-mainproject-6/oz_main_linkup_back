@@ -91,16 +91,16 @@ class EventResponse(BaseModel):
 
 class CompanyEventsQueryParams(BaseQueryParams):
     """회사 이벤트 목록 쿼리 파라미터"""
-    
+
     artist_id: int | None = Field(None, description="특정 아티스트 이벤트 필터")
     offset: int = Field(0, ge=0, description="오프셋")
 
 
 class CompanyArtistsQueryParams(BaseQueryParams):
     """회사 아티스트 목록 쿼리 파라미터"""
-    
+
     is_active: bool | None = Field(True, description="활동 상태 필터 (기본값: True)")
     offset: int = Field(0, ge=0, description="오프셋")
-    
+
     # 아티스트는 기본 50개로 조정
     limit: int = Field(50, ge=1, le=100, description="조회할 아티스트 수")

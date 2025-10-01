@@ -125,7 +125,7 @@ async def create_dummy_data():
         ]
 
         groups = []
-        for group_name, email, company_idx, member_count in group_data:
+        for group_name, _email, company_idx, _member_count in group_data:
             group = await Artist.create(
                 company=companies[company_idx],
                 group_name=group_name,
@@ -172,7 +172,7 @@ async def create_dummy_data():
         ]
 
         members = []
-        for stage_name, group_name, email, company_idx in member_data:
+        for stage_name, group_name, _email, company_idx in member_data:
             # parent_group 찾기 (같은 group_name을 가진 GROUP 타입)
             parent_group = next(g for g in groups if g.group_name == group_name)
 
@@ -201,7 +201,7 @@ async def create_dummy_data():
         ]
 
         solos = []
-        for stage_name, email, company_idx in solo_data:
+        for stage_name, _email, company_idx in solo_data:
             solo = await Artist.create(
                 company=companies[company_idx],
                 stage_name=stage_name,

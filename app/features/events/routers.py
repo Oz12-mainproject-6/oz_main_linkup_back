@@ -6,7 +6,6 @@ from loguru import logger
 
 from app.core.exceptions import FileProcessingError, NotFoundError, ValidationError
 from app.external.scrapping import fetch_myloveidol_json, get_myloveidol_schedule
-from app.features.events.models import EventCategory, EventVisibility
 from app.features.events.schemas import (
     BulkEventCreate,
     CalendarEventsQueryParams,
@@ -31,7 +30,9 @@ event_router = APIRouter(prefix="/api/events", tags=["events"])
 async def get_events(params: EventsQueryParams = Depends()):
     """이벤트 목록 조회"""
     try:
-        start_dt = datetime.fromisoformat(params.start_date) if params.start_date else None
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
         end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
 
     except ValueError as err:
@@ -65,7 +66,9 @@ async def get_subscribed_events(
 ):
     """구독 중인 아티스트의 이벤트 목록 조회 (로그인 필요)"""
     try:
-        start_dt = datetime.fromisoformat(params.start_date) if params.start_date else None
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
         end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
 
     except ValueError as err:
@@ -77,7 +80,9 @@ async def get_subscribed_events(
     ).values_list("artist_id", flat=True)
 
     if not subscribed_artist_ids:
-        return EventListResponse(events=[], total=0, page=params.skip // params.limit + 1, size=params.limit)
+        return EventListResponse(
+            events=[], total=0, page=params.skip // params.limit + 1, size=params.limit
+        )
 
     events, total = await EventCRUD.get_list(
         skip=params.skip,
@@ -162,13 +167,18 @@ async def download_bulk_events(params: DownloadEventsQueryParams = Depends()):
     조건 기반 일괄 이벤트 다운로드
     """
     try:
-        start_dt = datetime.fromisoformat(params.start_date) if params.start_date else None
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
         end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
     except ValueError as err:
         raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
 
     file_stream = await EventService.export_to_excel(
-        artist_id=params.artist_id, category=params.category, start_date=start_dt, end_date=end_dt
+        artist_id=params.artist_id,
+        category=params.category,
+        start_date=start_dt,
+        end_date=end_dt,
     )
 
     return StreamingResponse(
@@ -246,7 +256,9 @@ async def import_myloveidol_events(
             events = [e for e in events if e["idol"]["name"] == params.artist_name]
 
         # 크롤링
-        scraped_events = get_myloveidol_schedule(locale=params.locale, artist_name=params.artist_name)
+        scraped_events = get_myloveidol_schedule(
+            locale=params.locale, artist_name=params.artist_name
+        )
 
         if not scraped_events:
             return {

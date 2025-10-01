@@ -3,7 +3,6 @@ from fastapi import (
     Depends,
     File,
     Form,
-    Query,
     UploadFile,
 )
 
@@ -33,7 +32,9 @@ async def create_post(
 @posts_router.get("/", response_model=list[schemas.PostResponse])
 async def get_posts(params: PostsQueryParams = Depends()):
     """포스트 목록 조회"""
-    return await PostService.get_posts(params.limit, params.offset, params.artist_id, params.is_active)
+    return await PostService.get_posts(
+        params.limit, params.offset, params.artist_id, params.is_active
+    )
 
 
 @posts_router.get("/{post_id}", response_model=schemas.PostDetailResponse)

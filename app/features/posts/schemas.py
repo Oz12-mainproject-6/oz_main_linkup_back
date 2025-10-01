@@ -98,6 +98,8 @@ class PostDetailResponse(PostResponse):
 # ----------------- Query Parameters -----------------
 class PostsQueryParams(BaseQueryParams):
     """포스트 목록 조회 쿼리 파라미터"""
-    
+
     artist_id: int | None = Field(None, description="특정 아티스트의 포스트만 조회")
-    is_active: bool | None = Field(None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)")
+    is_active: bool | None = Field(
+        None, description="구독 중인 아티스트만 조회 (true: 구독 중만, null: 전체)"
+    )

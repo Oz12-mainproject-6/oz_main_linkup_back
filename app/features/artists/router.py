@@ -18,7 +18,11 @@ idol_router = APIRouter(prefix="/api/idol", tags=["idol"])
 async def get_idol_list(params: ArtistQueryParams = Depends()):
     """아이돌 리스트 조회 (활성 상태만)"""
     return await ArtistService.get_artist_list(
-        params.artist_type, params.artist_name, params.artist_id, params.limit, params.page
+        params.artist_type,
+        params.artist_name,
+        params.artist_id,
+        params.limit,
+        params.page,
     )
 
 
@@ -28,7 +32,9 @@ async def get_subscribed_artists(
     current_user: User = Depends(get_current_user),
 ):
     """구독 중인 아티스트 리스트 조회 (로그인 필요)"""
-    return await ArtistService.get_subscribed_artists(current_user, params.limit, params.page)
+    return await ArtistService.get_subscribed_artists(
+        current_user, params.limit, params.page
+    )
 
 
 @idol_router.get("/{artist_name}/info", response_model=ArtistSubscriptionInfo)

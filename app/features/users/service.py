@@ -32,9 +32,15 @@ class UserService:
     @staticmethod
     async def signup(request: SignupRequest) -> UserResponse:
         """회원가입 처리"""
-        # 이메일 중복 검사
+        # 기존 사용자 확인 (활성 + 탈퇴한 계정 모두)
         existing_user = await User.filter(email=request.email).first()
-        if existing_user:
+
+        # 탈퇴한 계정이 있는 경우 재활용
+        if existing_user and existing_user.deleted_at:
+            return await UserService._reactivate_deleted_account(existing_user, request)
+
+        # 활성 계정이 이미 있는 경우
+        if existing_user and not existing_user.deleted_at:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 등록된 이메일입니다.",
@@ -231,8 +237,10 @@ class UserService:
         request: SendVerificationEmailRequest,
     ) -> EmailVerificationResponse:
         """이메일 인증 코드 전송"""
-        # 기존 사용자 확인 (선택사항 - 회원가입 전에도 코드 전송 가능)
-        existing_user = await User.filter(email=request.email).first()
+        # 기존 사용자 확인 (활성 계정만)
+        existing_user = await User.filter(
+            email=request.email, deleted_at__isnull=True
+        ).first()
         if existing_user and existing_user.is_email_verified:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -454,14 +462,71 @@ class UserService:
 
     @staticmethod
     async def delete_account(user: User, response: Response) -> dict:
-        """회원 탈퇴 (soft delete)"""
+        """회원 탈퇴 (soft delete with email masking)"""
         if user.deleted_at:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 탈퇴한 계정입니다.",
             )
 
+        # 이메일 마스킹 처리
+        masked_email = await UserService._mask_email_for_deletion(user.id, user.email)
+
+        user.email = masked_email
         user.deleted_at = datetime.now(UTC)
         await user.save()
 
         return {"message": "회원 탈퇴가 완료되었습니다. 토큰이 무효화되었습니다."}
+
+    @staticmethod
+    async def _mask_email_for_deletion(user_id: int, original_email: str) -> str:
+        """탈퇴 시 이메일 마스킹 처리"""
+        import time
+
+        timestamp = int(time.time())
+        return f"deleted_{user_id}_{timestamp}@deleted.linkup.com"
+
+    @staticmethod
+    async def _reactivate_deleted_account(
+        existing_user: User, request: SignupRequest
+    ) -> UserResponse:
+        """탈퇴한 계정 재활용 (기존 데이터 유지)"""
+        # 이메일 인증 코드 확인
+        verification = await EmailVerification.filter(
+            email=request.email, code=request.verification_code, is_used=False
+        ).first()
+
+        if not verification:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="유효하지 않은 인증 코드입니다.",
+            )
+
+        if not await verification.is_valid():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="인증 코드가 만료되었습니다. 새로운 코드를 요청해주세요.",
+            )
+
+        # 인증 코드 사용 처리
+        await verification.mark_as_used()
+
+        # 기존 계정 재활성화 (새 정보로 업데이트)
+        existing_user.email = request.email  # 원래 이메일로 복구
+        existing_user.password = get_password_hash(request.password)  # 새 비밀번호
+        existing_user.nickname = request.nickname  # 새 닉네임
+        existing_user.user_type = request.user_type  # 새 사용자 타입
+        existing_user.deleted_at = None  # 탈퇴 상태 해제
+        existing_user.is_email_verified = True  # 이메일 인증 완료
+        existing_user.oauth_provider = None  # 소셜 로그인 정보 초기화
+        existing_user.oauth_id = None
+        await existing_user.save()
+
+        return UserResponse(
+            id=existing_user.id,
+            email=existing_user.email,
+            nickname=existing_user.nickname,
+            user_type=existing_user.user_type,
+            oauth_provider=existing_user.oauth_provider,
+            is_email_verified=existing_user.is_email_verified,
+        )
