@@ -88,6 +88,8 @@ class UserMeWithPostsResponse(BaseModel):
     nickname: str | None
     profile_image_url: str | None
     user_type: UserType
+    is_social_login: bool = False  # 소셜로그인 여부
+    oauth_provider: str | None = None  # 소셜로그인 제공자
     posts: list[UserPostResponse] = []
 
     class Config:
