@@ -103,6 +103,8 @@ async def get_my_profile(
         "nickname": current_user.nickname,
         "profile_image_url": current_user.profile_image_url,
         "user_type": current_user.user_type,
+        "is_social_login": bool(current_user.oauth_provider),  # 소셜로그인 여부
+        "oauth_provider": current_user.oauth_provider,  # 소셜로그인 제공자 (kakao, google 등)
         "posts": [],
     }
 
