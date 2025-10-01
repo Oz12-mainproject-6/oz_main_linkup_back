@@ -33,7 +33,7 @@ async def create_post(
 async def get_posts(params: PostsQueryParams = Depends()):
     """포스트 목록 조회"""
     return await PostService.get_posts(
-        params.limit, params.offset, params.artist_id, params.is_active
+        params.limit, params.page, params.artist_id, params.is_active
     )
 
 
