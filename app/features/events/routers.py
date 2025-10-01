@@ -39,7 +39,7 @@ async def get_events(params: EventsQueryParams = Depends()):
         raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
 
     events, total = await EventCRUD.get_list(
-        skip=params.skip,
+        page=params.page,
         limit=params.limit,
         artist_parent_group=params.artist_parent_group,
         artist_id=params.artist_id,
@@ -85,7 +85,7 @@ async def get_subscribed_events(
         )
 
     events, total = await EventCRUD.get_list(
-        skip=params.skip,
+        page=params.page,
         limit=params.limit,
         artist_parent_group=params.artist_parent_group,
         artist_id=params.artist_id,
