@@ -37,21 +37,27 @@ async def get_users(
 
     users = await query.offset(offset).limit(limit).order_by("-created_at")
 
-    user_list = [
-        UserDetailResponse(
-            id=user.id,
-            email=user.email,
-            nickname=user.nickname,
-            user_type=user.user_type,
-            oauth_provider=user.oauth_provider,
-            is_email_verified=user.is_email_verified,
-            last_login_at=user.last_login_at,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
-            deleted_at=user.deleted_at,
+    user_list = []
+    for user in users:
+        # 탈퇴 상태 표시를 위한 이메일 수정
+        display_email = user.email
+        if user.deleted_at:
+            display_email = f"[탈퇴] {user.original_email or user.email}"
+        
+        user_list.append(
+            UserDetailResponse(
+                id=user.id,
+                email=display_email,
+                nickname=user.nickname,
+                user_type=user.user_type,
+                oauth_provider=user.oauth_provider,
+                is_email_verified=user.is_email_verified,
+                last_login_at=user.last_login_at,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
+                deleted_at=user.deleted_at,
+            )
         )
-        for user in users
-    ]
 
     has_next = (offset + limit) < total
 

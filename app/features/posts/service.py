@@ -19,13 +19,13 @@ class PostService:
 
     @staticmethod
     async def get_likes_count(post: models.Post) -> int:
-        """포스트 좋아요 수 조회"""
-        return await models.Like.filter(post=post).count()
+        """포스트 좋아요 수 조회 (탈퇴한 유저 제외)"""
+        return await models.Like.filter(post=post, user__deleted_at__isnull=True).count()
 
     @staticmethod
     async def get_comments_count(post: models.Post) -> int:
-        """포스트 댓글 수 조회"""
-        return await models.Comment.filter(post=post).count()
+        """포스트 댓글 수 조회 (탈퇴한 유저 제외)"""
+        return await models.Comment.filter(post=post, user__deleted_at__isnull=True).count()
 
     @staticmethod
     async def build_post_response(post: models.Post) -> schemas.PostResponse:
@@ -141,7 +141,8 @@ class PostService:
         is_active: bool | None = None,
     ) -> list[schemas.PostResponse]:
         """포스트 목록 조회"""
-        query = models.Post.all().prefetch_related("user", "artist")
+        # 탈퇴한 유저의 포스트 제외
+        query = models.Post.filter(user__deleted_at__isnull=True).prefetch_related("user", "artist")
 
         if is_active:
             subscribed_artist_ids = await Subscription.filter(
@@ -170,8 +171,9 @@ class PostService:
         post = await PostService.validate_post_exists(post_id)
         likes_count = await PostService.get_likes_count(post)
 
+        # 탈퇴한 유저의 댓글 제외
         comments = (
-            await models.Comment.filter(post=post)
+            await models.Comment.filter(post=post, user__deleted_at__isnull=True)
             .prefetch_related("user")
             .order_by("created_at")
         )
@@ -247,8 +249,9 @@ class PostService:
         if not post:
             raise PostNotFoundError()
 
+        # 탈퇴한 유저의 좋아요 제외
         likes = (
-            await models.Like.filter(post=post)
+            await models.Like.filter(post=post, user__deleted_at__isnull=True)
             .prefetch_related("user")
             .order_by("-created_at")
         )
@@ -288,8 +291,9 @@ class PostService:
         if not post:
             raise PostNotFoundError()
 
+        # 탈퇴한 유저의 댓글 제외
         comments = (
-            await models.Comment.filter(post=post)
+            await models.Comment.filter(post=post, user__deleted_at__isnull=True)
             .prefetch_related("user")
             .order_by("created_at")
         )
