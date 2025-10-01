@@ -21,6 +21,7 @@ class User(TimestampMixin):
 
     id = fields.BigIntField(pk=True, description="사용자 ID")
     email = fields.CharField(max_length=200, unique=True, description="이메일")
+    original_email = fields.CharField(max_length=200, null=True, description="탈퇴 전 원본 이메일")
     password = fields.CharField(max_length=200, description="비밀번호")
     nickname = fields.CharField(max_length=50, null=True, description="별명")
     profile_image_url = fields.CharField(

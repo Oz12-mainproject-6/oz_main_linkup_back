@@ -212,7 +212,7 @@ async def change_password(
     return await UserService.change_password(current_user, request)
 
 
-@auth_router.delete("/me", status_code=204)
+@auth_router.delete("/me")
 async def delete_my_account(
     current_user: User = Depends(get_current_user), response: Response = None
 ):

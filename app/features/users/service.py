@@ -32,19 +32,18 @@ class UserService:
     @staticmethod
     async def signup(request: SignupRequest) -> UserResponse:
         """회원가입 처리"""
-        # 기존 사용자 확인 (활성 + 탈퇴한 계정 모두)
-        existing_user = await User.filter(email=request.email).first()
-
-        # 탈퇴한 계정이 있는 경우 재활용
-        if existing_user and existing_user.deleted_at:
-            return await UserService._reactivate_deleted_account(existing_user, request)
-
-        # 활성 계정이 이미 있는 경우
-        if existing_user and not existing_user.deleted_at:
+        # 활성 계정 확인
+        existing_active_user = await User.filter(email=request.email, deleted_at__isnull=True).first()
+        if existing_active_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 등록된 이메일입니다.",
             )
+        
+        # 탈퇴한 계정 확인 (original_email로 찾기)
+        existing_deleted_user = await User.filter(original_email=request.email, deleted_at__isnull=False).first()
+        if existing_deleted_user:
+            return await UserService._reactivate_deleted_account(existing_deleted_user, request)
 
         # 이메일 인증 코드 확인
         verification = await EmailVerification.filter(
@@ -472,6 +471,7 @@ class UserService:
         # 이메일 마스킹 처리
         masked_email = await UserService._mask_email_for_deletion(user.id, user.email)
 
+        user.original_email = user.email  # 원본 이메일 보관
         user.email = masked_email
         user.deleted_at = datetime.now(UTC)
         await user.save()
@@ -513,6 +513,7 @@ class UserService:
 
         # 기존 계정 재활성화 (새 정보로 업데이트)
         existing_user.email = request.email  # 원래 이메일로 복구
+        existing_user.original_email = None  # 원본 이메일 초기화 (활성 상태이므로)
         existing_user.password = get_password_hash(request.password)  # 새 비밀번호
         existing_user.nickname = request.nickname  # 새 닉네임
         existing_user.user_type = request.user_type  # 새 사용자 타입
