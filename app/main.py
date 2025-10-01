@@ -42,6 +42,7 @@ if os.getenv("ENVIRONMENT") == "production":
     # 프로덕션에서는 특정 도메인만 허용
     origins = [
         "https://dev.linkup.n-e.kr",
+        "http://localhost:5173",
         os.getenv("FRONTEND_DOMAIN", ""),
     ]
     allow_credentials = True

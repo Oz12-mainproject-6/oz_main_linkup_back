@@ -231,11 +231,6 @@ class SubscriptionService:
             sub = await Subscription.get(artist_id=artist_id, user=user, is_active=True)
             artist = await sub.artist
 
-            # INHERITED 구독은 직접 취소 불가
-            if sub.subscription_type == SubscriptionType.INHERITED:
-                raise ValidationError(
-                    "상속된 구독은 직접 취소할 수 없습니다. 그룹 구독을 취소해주세요."
-                )
 
             # 구독 취소
             sub.is_active = False
