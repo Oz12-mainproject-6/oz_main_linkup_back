@@ -54,7 +54,7 @@ async def get_events(params: EventsQueryParams = Depends()):
     return EventListResponse(
         events=events,
         total=total,
-        page=params.skip // params.limit + 1,
+        page=params.page,
         size=params.limit,
     )
 
@@ -81,7 +81,7 @@ async def get_subscribed_events(
 
     if not subscribed_artist_ids:
         return EventListResponse(
-            events=[], total=0, page=params.skip // params.limit + 1, size=params.limit
+            events=[], total=0, page=params.page, size=params.limit
         )
 
     events, total = await EventCRUD.get_list(
@@ -100,7 +100,7 @@ async def get_subscribed_events(
     return EventListResponse(
         events=events,
         total=total,
-        page=params.skip // params.limit + 1,
+        page=params.page,
         size=params.limit,
     )
 
