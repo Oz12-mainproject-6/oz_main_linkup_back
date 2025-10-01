@@ -303,11 +303,11 @@ class UserService:
         """OAuth 로그인 리다이렉트 URL 생성"""
         if provider == "kakao":
             client_id = os.getenv("KAKAO_CLIENT_ID")
-            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/kakao/callback"  # redirect_uri도 env에서 관리하는가?
+            redirect_uri = "https://linkup.p-e.kr/api/auth/kakao/callback"
             return f"https://kauth.kakao.com/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope=profile_nickname,account_email&state={user_type}"
         elif provider == "google":
             client_id = os.getenv("GOOGLE_CLIENT_ID")
-            redirect_uri = "http://linkup.p-e.kr:8000/api/auth/google/callback"
+            redirect_uri = "https://linkup.p-e.kr/api/auth/google/callback"
             return f"https://accounts.google.com/o/oauth2/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=openid email profile&response_type=code&access_type=offline&state={user_type}"
         else:
             raise HTTPException(
@@ -393,7 +393,7 @@ class UserService:
                         "grant_type": "authorization_code",
                         "client_id": os.getenv("KAKAO_CLIENT_ID"),
                         "client_secret": os.getenv("KAKAO_CLIENT_SECRET"),
-                        "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/kakao/callback",
+                        "redirect_uri": "https://linkup.p-e.kr/api/auth/kakao/callback",
                         "code": code,
                     },
                 )
@@ -404,7 +404,7 @@ class UserService:
                         "grant_type": "authorization_code",
                         "client_id": os.getenv("GOOGLE_CLIENT_ID"),
                         "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-                        "redirect_uri": "http://linkup.p-e.kr:8000/api/auth/google/callback",
+                        "redirect_uri": "https://linkup.p-e.kr/api/auth/google/callback",
                         "code": code,
                     },
                 )
