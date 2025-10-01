@@ -41,7 +41,8 @@ app = FastAPI(
 if os.getenv("ENVIRONMENT") == "production":
     # 프로덕션에서는 특정 도메인만 허용
     origins = [
-        os.getenv("FRONTEND_DOMAIN", "https://yourdomain.com"),
+        "https://dev.linkup.n-e.kr",
+        os.getenv("FRONTEND_DOMAIN", ""),
     ]
     allow_credentials = True
 else:
@@ -61,11 +62,11 @@ else:
     ]
     allow_credentials = False  # 개발 환경에서는 credentials 비활성화
 
-# CORS 설정 - 개발용 완전 개방
+# CORS 설정 - 환경별 도메인 허용
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 출처 허용
-    allow_credentials=False,  # credentials 비활성화
+    allow_origins=origins,  # 위에서 정의한 origins 사용
+    allow_credentials=allow_credentials,  # 환경별 credentials 설정
     allow_methods=["*"],  # 모든 메소드 허용
     allow_headers=["*"],  # 모든 헤더 허용
 )
