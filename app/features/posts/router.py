@@ -16,7 +16,7 @@ posts_router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
 
 # ----------------- Post CRUD -----------------
-@posts_router.post("/")
+@posts_router.post("")
 async def create_post(
     artist_id: int = Form(...),
     post_content: str = Form(...),
@@ -29,7 +29,7 @@ async def create_post(
     )
 
 
-@posts_router.get("/", response_model=list[schemas.PostResponse])
+@posts_router.get("", response_model=list[schemas.PostResponse])
 async def get_posts(params: PostsQueryParams = Depends()):
     """포스트 목록 조회"""
     return await PostService.get_posts(

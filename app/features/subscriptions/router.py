@@ -9,7 +9,7 @@ from .service import SubscriptionService
 subscriptions_router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
 
-@subscriptions_router.post("/")
+@subscriptions_router.post("")
 async def create_subscription(
     request: SubscriptionCreate, current_user: User = Depends(get_current_fan_user)
 ):
@@ -19,7 +19,7 @@ async def create_subscription(
     )
 
 
-@subscriptions_router.get("/")
+@subscriptions_router.get("")
 async def list_subscriptions(
     params: SubscriptionsQueryParams = Depends(),
     current_user: User = Depends(get_current_fan_user),

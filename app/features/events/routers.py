@@ -26,7 +26,7 @@ from app.features.users.models import User
 event_router = APIRouter(prefix="/api/events", tags=["events"])
 
 
-@event_router.get("/", response_model=EventListResponse)
+@event_router.get("", response_model=EventListResponse)
 async def get_events(params: EventsQueryParams = Depends()):
     """이벤트 목록 조회"""
     try:
@@ -114,7 +114,7 @@ async def get_event(event_id: int):
     return event
 
 
-@event_router.post("/", response_model=FileUploadResponse)
+@event_router.post("", response_model=FileUploadResponse)
 async def bulk_create_events(
     bulk_data: BulkEventCreate, background_tasks: BackgroundTasks
 ):

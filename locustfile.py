@@ -45,7 +45,7 @@ class LinkupAPIUser(HttpUser):
             return
             
         headers = {"Authorization": f"Bearer {self.token}"}
-        with self.client.get("/api/subscriptions/?include_image=true", 
+        with self.client.get("/api/subscriptions?include_image=true", 
                            headers=headers,
                            catch_response=True, name="구독목록") as response:
             if response.status_code == 200:
