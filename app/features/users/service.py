@@ -1,5 +1,6 @@
 import os
 import traceback
+import asyncio
 from datetime import UTC, datetime
 from urllib.parse import unquote
 
@@ -122,9 +123,8 @@ class UserService:
         # JWT 토큰 생성
         access_token = create_access_token(data={"sub": str(user.id)})
 
-        # 마지막 로그인 시간 업데이트
-        user.last_login_at = datetime.now(UTC)
-        await user.save()
+        # 마지막 로그인 시간 업데이트 (비동기로 처리 - 응답 속도 개선)
+        asyncio.create_task(UserService._update_last_login(user.id))
 
         return TokenResponse(access_token=access_token)
 
@@ -542,6 +542,17 @@ class UserService:
             oauth_provider=existing_user.oauth_provider,
             is_email_verified=existing_user.is_email_verified,
         )
+
+    @staticmethod
+    async def _update_last_login(user_id: int):
+        """마지막 로그인 시간 업데이트 (비동기 처리)"""
+        try:
+            user = await User.get(id=user_id)
+            user.last_login_at = datetime.now(UTC)
+            await user.save()
+        except Exception as e:
+            # 로그인 성공에는 영향 없도록 에러를 무시
+            print(f"Last login update failed for user {user_id}: {str(e)}")
 
     @staticmethod
     async def revoke_social_token(user: User) -> dict:

@@ -4,10 +4,10 @@ import json
 class LinkupAPIUser(HttpUser):
     wait_time = between(0.5, 2.0)  # 0.5-2초 대기 (실제 사용자 패턴)
     host = "https://linkup.p-e.kr"
-    token = None  # 토큰 저장용
+    token = None  # 각 사용자별 개별 토큰
     
     def on_start(self):
-        """테스트 시작 시 로그인"""
+        """테스트 시작 시 한 번만 로그인 (각 사용자별 개별 토큰)"""
         response = self.client.post("/api/auth/login", json={
             "email": "fan_dummy_3@gmail.com",
             "password": "fan123!"
