@@ -139,35 +139,6 @@ class SubscriptionService:
         else:
             return {"detail": "구독이 완료되었습니다."}
 
-    @staticmethod
-    async def build_subscription_response(
-        subscription: Subscription, include_image: bool = False
-    ):
-        """구독 응답 객체 생성"""
-        if include_image:
-            # 아티스트 FACE 이미지 조회
-            face_image = await SharedImage.filter(
-                artist=subscription.artist, image_type=ImageType.FACE
-            ).first()
-
-            return SubscriptionWithImageOut(
-                id=subscription.id,
-                artist_id=subscription.artist.id,
-                group_name=subscription.artist.group_name,
-                stage_name=subscription.artist.stage_name,
-                artist_image_url=face_image.url if face_image else None,
-                is_active=subscription.is_active,
-                subscription_type=subscription.subscription_type,
-            )
-        else:
-            return SubscriptionOut(
-                id=subscription.id,
-                artist_id=subscription.artist.id,
-                group_name=subscription.artist.group_name,
-                stage_name=subscription.artist.stage_name,
-                is_active=subscription.is_active,
-                subscription_type=subscription.subscription_type,
-            )
 
     @staticmethod
     async def get_subscriptions(
@@ -176,7 +147,7 @@ class SubscriptionService:
         group_name: str | None = None,
         stage_name: str | None = None,
     ):
-        """구독 목록 조회"""
+        """구독 목록 조회 (N+1 쿼리 최적화)"""
         # 기본 쿼리
         query = Subscription.filter(user=user, is_active=True)
 
@@ -188,13 +159,42 @@ class SubscriptionService:
 
         subscriptions = await query.prefetch_related("artist")
 
+        if not include_image:
+            # 이미지가 필요 없으면 빠른 처리
+            return [
+                SubscriptionOut(
+                    id=sub.id,
+                    artist_id=sub.artist.id,
+                    group_name=sub.artist.group_name,
+                    stage_name=sub.artist.stage_name,
+                    is_active=sub.is_active,
+                    subscription_type=sub.subscription_type,
+                )
+                for sub in subscriptions
+            ]
+
+        # 이미지가 필요한 경우 - 배치로 한번에 조회
+        artist_ids = [sub.artist.id for sub in subscriptions]
+        face_images = await SharedImage.filter(
+            artist_id__in=artist_ids, 
+            image_type=ImageType.FACE
+        )
+        
+        # 아티스트 ID별로 이미지 매핑
+        image_map = {img.artist_id: img.url for img in face_images}
+        
         result = []
         for sub in subscriptions:
-            response = await SubscriptionService.build_subscription_response(
-                sub, include_image
-            )
-            result.append(response)
-
+            result.append(SubscriptionWithImageOut(
+                id=sub.id,
+                artist_id=sub.artist.id,
+                group_name=sub.artist.group_name,
+                stage_name=sub.artist.stage_name,
+                artist_image_url=image_map.get(sub.artist.id),
+                is_active=sub.is_active,
+                subscription_type=sub.subscription_type,
+            ))
+        
         return result
 
     @staticmethod
