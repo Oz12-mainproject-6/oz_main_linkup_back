@@ -13,7 +13,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 pwd_context: CryptContext = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
-    bcrypt__rounds=10,  # 성능 최적화를 위해 12에서 10으로 감소
+    bcrypt__rounds=8,  # 성능 최적화를 위해 12에서 8으로 감소
 )
 
 
