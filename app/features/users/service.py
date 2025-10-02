@@ -1,6 +1,6 @@
+import asyncio
 import os
 import traceback
-import asyncio
 from datetime import UTC, datetime
 from urllib.parse import unquote
 
@@ -571,7 +571,7 @@ class UserService:
                             "Content-Type": "application/x-www-form-urlencoded",
                         },
                     )
-                    
+
                 elif user.oauth_provider == "google":
                     # 구글 토큰 폐기
                     response = await client.post(
@@ -584,13 +584,19 @@ class UserService:
                 await user.save()
 
                 if response.status_code == 200:
-                    return {"message": f"{user.oauth_provider} 토큰이 성공적으로 폐기되었습니다."}
+                    return {
+                        "message": f"{user.oauth_provider} 토큰이 성공적으로 폐기되었습니다."
+                    }
                 else:
-                    return {"message": f"{user.oauth_provider} 토큰 폐기 요청을 보냈지만 응답이 예상과 다릅니다. DB에서는 제거되었습니다."}
+                    return {
+                        "message": f"{user.oauth_provider} 토큰 폐기 요청을 보냈지만 응답이 예상과 다릅니다. DB에서는 제거되었습니다."
+                    }
 
         except Exception as e:
             # 오류가 발생해도 DB에서는 토큰 제거
             user.oauth_access_token = None
             await user.save()
             print(f"소셜 토큰 폐기 오류: {str(e)}")
-            return {"message": f"토큰 폐기 중 오류가 발생했지만 DB에서는 제거되었습니다."}
+            return {
+                "message": "토큰 폐기 중 오류가 발생했지만 DB에서는 제거되었습니다."
+            }

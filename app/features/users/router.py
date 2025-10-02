@@ -87,7 +87,7 @@ async def logout(current_user: User = Depends(get_current_user)):
     if current_user.oauth_provider and current_user.oauth_access_token:
         result = await UserService.revoke_social_token(current_user)
         return result
-    
+
     return {"message": "로그아웃되었습니다."}
 
 

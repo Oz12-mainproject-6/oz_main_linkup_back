@@ -1,4 +1,5 @@
 from fastapi import UploadFile
+from tortoise.functions import Count
 
 from app.core.exceptions import (
     ArtistNotFoundError,
@@ -164,10 +165,55 @@ class PostService:
 
         posts = await query.offset(offset).limit(limit).order_by("-created_at")
 
+        # N+1 쿼리 최적화: 배치로 likes와 comments 수 조회
+        if not posts:
+            return []
+
+        post_ids = [post.id for post in posts]
+
+        # 배치로 likes 수 조회 (탈퇴한 유저 제외)
+        likes_counts = (
+            await models.Like.filter(
+                post_id__in=post_ids, user__deleted_at__isnull=True
+            )
+            .group_by("post_id")
+            .annotate(count=Count("id"))
+            .values("post_id", "count")
+        )
+        likes_map = {item["post_id"]: item["count"] for item in likes_counts}
+
+        # 배치로 comments 수 조회 (탈퇴한 유저 제외)
+        comments_counts = (
+            await models.Comment.filter(
+                post_id__in=post_ids, user__deleted_at__isnull=True
+            )
+            .group_by("post_id")
+            .annotate(count=Count("id"))
+            .values("post_id", "count")
+        )
+        comments_map = {item["post_id"]: item["count"] for item in comments_counts}
+
+        # 빠른 응답 생성 (개별 쿼리 없이)
         result = []
         for post in posts:
-            post_response = await PostService.build_post_response(post)
-            result.append(post_response)
+            result.append(
+                schemas.PostResponse(
+                    id=post.id,
+                    content=post.content,
+                    image_url=post.image_url,
+                    user=schemas.UserResponse(
+                        id=post.user.id, nickname=post.user.nickname
+                    ),
+                    artist=schemas.ArtistResponse(
+                        id=post.artist.id,
+                        name=post.artist.stage_name or post.artist.group_name,
+                    ),
+                    likes_count=likes_map.get(post.id, 0),
+                    comments_count=comments_map.get(post.id, 0),
+                    created_at=post.created_at,
+                    updated_at=post.updated_at,
+                )
+            )
 
         return result
 
