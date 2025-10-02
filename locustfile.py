@@ -4,24 +4,19 @@ import json
 class LinkupAPIUser(HttpUser):
     wait_time = between(0.5, 2.0)  # 0.5-2초 대기 (실제 사용자 패턴)
     host = "https://linkup.p-e.kr"
+    token = None  # 토큰 저장용
     
     def on_start(self):
         """테스트 시작 시 로그인"""
-        # 실제 테스트용 계정으로 변경 필요
         response = self.client.post("/api/auth/login", json={
-            "email": "fan_dummy_1@gmail.com",
+            "email": "fan_dummy_3@gmail.com",
             "password": "fan123!"
         })
         
         if response.status_code == 200:
-            token = response.json().get("access_token")
-            if token:
-                self.client.headers.update({"Authorization": f"Bearer {token}"})
-                print("✅ 로그인 성공")
-            else:
-                print("❌ 토큰 없음")
-        else:
-            print(f"❌ 로그인 실패: {response.status_code}")
+            self.token = response.json().get("access_token")
+            if self.token:
+                self.client.headers.update({"Authorization": f"Bearer {self.token}"})
     
     @task(4)
     def get_artists(self):
@@ -46,7 +41,12 @@ class LinkupAPIUser(HttpUser):
     @task(3)
     def get_subscriptions(self):
         """구독 목록 조회 (복잡한 조인 쿼리)"""
-        with self.client.get("/api/subscriptions?include_image=true", 
+        if not self.token:
+            return
+            
+        headers = {"Authorization": f"Bearer {self.token}"}
+        with self.client.get("/api/subscriptions/?include_image=true", 
+                           headers=headers,
                            catch_response=True, name="구독목록") as response:
             if response.status_code == 200:
                 response.success()
