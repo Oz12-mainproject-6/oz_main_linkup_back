@@ -25,8 +25,8 @@ class ArtistService:
     ) -> ArtistListPaginationResponse:
         """아티스트 리스트 조회 (활성 상태만)"""
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         # 기본 쿼리 (활성 상태만)
         query = Artist.filter(is_active=True)
@@ -80,8 +80,8 @@ class ArtistService:
     ) -> ArtistListPaginationResponse:
         """구독 중인 아티스트 리스트 조회"""
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         # 구독 중인 아티스트 ID 조회
         subscribed_artist_ids = await Subscription.filter(

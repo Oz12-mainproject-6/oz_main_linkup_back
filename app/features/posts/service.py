@@ -159,8 +159,8 @@ class PostService:
         if artist_id:
             query = query.filter(artist_id=artist_id)
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         posts = await query.offset(offset).limit(limit).order_by("-created_at")
 

@@ -96,8 +96,8 @@ class CompanyService:
                 raise NotFoundError("해당 아티스트를 찾을 수 없습니다.")
             query = query.filter(artist_id=artist_id)
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         events = (
             await query.prefetch_related("artist")
@@ -233,8 +233,8 @@ class CompanyService:
         if is_active is not None:
             query = query.filter(is_active=is_active)
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         artists = await query.order_by("-created_at").offset(offset).limit(limit)
 

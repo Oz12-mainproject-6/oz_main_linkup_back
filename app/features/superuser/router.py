@@ -26,7 +26,7 @@ async def get_users(
     current_user: User = Depends(get_superuser),
 ):
     """모든 사용자 조회 (슈퍼유저만 접근 가능)"""
-    offset = (page - 1) * limit
+    offset = max(0, (page - 1) * limit)
 
     query = User.all()
 
@@ -77,7 +77,7 @@ async def get_all_posts(
     current_user: User = Depends(get_superuser),
 ):
     """전체 포스트 조회 (모든 사용자 기준)"""
-    offset = (page - 1) * limit
+    offset = max(0, (page - 1) * limit)
 
     posts = (
         await Post.all()
@@ -122,7 +122,7 @@ async def get_all_comments(
     current_user: User = Depends(get_superuser),
 ):
     """전체 댓글 조회 (모든 사용자 기준)"""
-    offset = (page - 1) * limit
+    offset = max(0, (page - 1) * limit)
 
     comments = (
         await Comment.all()

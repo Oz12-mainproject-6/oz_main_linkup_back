@@ -56,8 +56,8 @@ class EventCRUD:
         if subscribed_artist_ids is not None:
             query = query.filter(artist_id__in=subscribed_artist_ids)
 
-        # offset 계산
-        offset = (page - 1) * limit
+        # offset 계산 (page는 최소 1)
+        offset = max(0, (page - 1) * limit)
 
         total = await query.count()
         events = (
