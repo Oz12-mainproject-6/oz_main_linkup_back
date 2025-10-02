@@ -51,7 +51,7 @@ echo "✅ Database setup complete!"
 # FastAPI 앱 실행
 echo "🌟 Starting FastAPI application..."
 if [ "$ENVIRONMENT" = "production" ]; then
-    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 else
     uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level info
 fi
