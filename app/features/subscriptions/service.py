@@ -73,7 +73,11 @@ class SubscriptionService:
 
         # parent_group이 설정되지 않은 경우에만 group_name으로 fallback
         # 단, 반드시 GROUP 타입일 때만 실행
-        if not group_members and artist.group_name and artist.artist_type == ArtistType.GROUP:
+        if (
+            not group_members
+            and artist.group_name
+            and artist.artist_type == ArtistType.GROUP
+        ):
             group_members = await Artist.filter(
                 group_name=artist.group_name,
                 artist_type=ArtistType.INDIVIDUAL,
