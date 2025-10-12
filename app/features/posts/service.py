@@ -1,6 +1,6 @@
 from fastapi import UploadFile
-from tortoise.functions import Count
 from tortoise.expressions import Q
+from tortoise.functions import Count
 
 from app.core.exceptions import (
     ArtistNotFoundError,
@@ -164,11 +164,15 @@ class PostService:
         # offset 계산 (page는 최소 1)
         offset = max(0, (page - 1) * limit)
 
-        # 1번 쿼리로 모든 데이터 가져오기: annotate 추가
+        # 1번 쿼리로 모든 데이터 가져오기
         posts = await (
             query.annotate(
-                likes_count=Count("likes", filter=Q(likes__user__deleted_at__isnull=True)),
-                comments_count=Count("comments", filter=Q(comments__user__deleted_at__isnull=True))
+                likes_count=Count(
+                    "likes", filter=Q(likes__user__deleted_at__isnull=True)
+                ),
+                comments_count=Count(
+                    "comments", filter=Q(comments__user__deleted_at__isnull=True)
+                ),
             )
             .offset(offset)
             .limit(limit)
@@ -190,8 +194,8 @@ class PostService:
                         id=post.artist.id,
                         name=post.artist.stage_name or post.artist.group_name,
                     ),
-                    likes_count=post.likes_count,      # annotate로 계산된 값 직접 접근
-                    comments_count=post.comments_count, # annotate로 계산된 값 직접 접근
+                    likes_count=post.likes_count,  # annotate로 계산된 값 직접 접근
+                    comments_count=post.comments_count,  # annotate로 계산된 값 직접 접근
                     created_at=post.created_at,
                     updated_at=post.updated_at,
                 )
