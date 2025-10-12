@@ -1,5 +1,6 @@
 from fastapi import UploadFile
 from tortoise.functions import Count
+from tortoise.expressions import Q
 
 from app.core.exceptions import (
     ArtistNotFoundError,
@@ -163,37 +164,18 @@ class PostService:
         # offset 계산 (page는 최소 1)
         offset = max(0, (page - 1) * limit)
 
-        posts = await query.offset(offset).limit(limit).order_by("-created_at")
-
-        # N+1 쿼리 최적화: 배치로 likes와 comments 수 조회
-        if not posts:
-            return []
-
-        post_ids = [post.id for post in posts]
-
-        # 배치로 likes 수 조회 (탈퇴한 유저 제외)
-        likes_counts = (
-            await models.Like.filter(
-                post_id__in=post_ids, user__deleted_at__isnull=True
+        # 1번 쿼리로 모든 데이터 가져오기: annotate 추가
+        posts = await (
+            query.annotate(
+                likes_count=Count("likes", filter=Q(likes__user__deleted_at__isnull=True)),
+                comments_count=Count("comments", filter=Q(comments__user__deleted_at__isnull=True))
             )
-            .group_by("post_id")
-            .annotate(count=Count("id"))
-            .values("post_id", "count")
+            .offset(offset)
+            .limit(limit)
+            .order_by("-created_at")
         )
-        likes_map = {item["post_id"]: item["count"] for item in likes_counts}
 
-        # 배치로 comments 수 조회 (탈퇴한 유저 제외)
-        comments_counts = (
-            await models.Comment.filter(
-                post_id__in=post_ids, user__deleted_at__isnull=True
-            )
-            .group_by("post_id")
-            .annotate(count=Count("id"))
-            .values("post_id", "count")
-        )
-        comments_map = {item["post_id"]: item["count"] for item in comments_counts}
-
-        # 빠른 응답 생성 (개별 쿼리 없이)
+        # 추가 쿼리 없이 바로 응답 생성 (annotate로 계산된 값 사용)
         result = []
         for post in posts:
             result.append(
@@ -208,8 +190,8 @@ class PostService:
                         id=post.artist.id,
                         name=post.artist.stage_name or post.artist.group_name,
                     ),
-                    likes_count=likes_map.get(post.id, 0),
-                    comments_count=comments_map.get(post.id, 0),
+                    likes_count=post.likes_count,      # annotate로 계산된 값 직접 접근
+                    comments_count=post.comments_count, # annotate로 계산된 값 직접 접근
                     created_at=post.created_at,
                     updated_at=post.updated_at,
                 )
