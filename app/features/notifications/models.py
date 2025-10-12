@@ -1,0 +1,85 @@
+from enum import Enum
+
+from tortoise import fields
+
+from app.core.mixins import TimestampMixin
+
+
+class NotificationType(str, Enum):
+    """알림 타입"""
+
+    EVENT_REMINDER = "event_reminder"
+    NEW_POST = "new_post"
+    SUBSCRIPTION_CONFIRMED = "subscription_confirmed"
+    ARTIST_UPDATE = "artist_update"
+    SYSTEM_NOTICE = "system_notice"
+
+
+class EntityType(str, Enum):
+    """연관 엔티티 타입"""
+
+    EVENTS = "Events"
+    POST = "Post"
+    ARTIST = "Artist"
+
+
+class SubscriptionType(str, Enum):
+    """구독 타입"""
+
+    DIRECT = "direct"  # 직접 구독
+    INHERITED = "inherited"  # 그룹 구독으로 인한 상속 구독
+
+
+class Notifications(TimestampMixin):
+    """알림 모델"""
+
+    id = fields.BigIntField(pk=True, description="알림 ID")
+    user = fields.ForeignKeyField(
+        "models.User",
+        related_name="notifications",
+        description="사용자",
+    )
+    type = fields.CharEnumField(
+        NotificationType,
+        description="알림 타입",
+    )
+    message = fields.CharField(max_length=200, null=True, description="알림 메시지")
+    entity_type = fields.CharEnumField(
+        EntityType,
+        null=True,
+        description="관련 엔티티 타입",
+    )
+    entity_id = fields.BigIntField(null=True, description="관련 엔티티 ID")
+    read_at = fields.DatetimeField(null=True, description="읽은 시간")
+    url = fields.CharField(max_length=255, null=True, description="알림 관련 URL")
+
+    class Meta:
+        table = "notifications"
+
+
+class Subscription(TimestampMixin):
+    """구독 모델"""
+
+    id = fields.BigIntField(pk=True, description="구독 ID")
+    user = fields.ForeignKeyField(
+        "models.User",
+        related_name="subscriptions",
+        description="구독자",
+    )
+    artist = fields.ForeignKeyField(
+        "models.Artist",
+        related_name="subscribers",
+        description="아티스트",
+    )
+    is_active = fields.BooleanField(default=True, description="구독 상태")
+    subscription_type = fields.CharEnumField(
+        SubscriptionType,
+        default=SubscriptionType.DIRECT,
+        description="구독 타입 (직접/상속)",
+    )
+
+    class Meta:
+        table = "subscription"
+        unique_together = [
+            ("user", "artist")
+        ]  # 같은 사용자가 같은 아티스트를 중복 구독 방지

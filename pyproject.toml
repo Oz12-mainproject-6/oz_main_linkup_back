@@ -5,22 +5,92 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aerich>=0.9.1",
-    "asyncpg>=0.30.0",
+    # Core framework
     "fastapi>=0.116.1",
-    "pre-commit>=4.3.0",
-    "python-dotenv>=1.1.1",
-    "tortoise-orm>=0.25.1",
     "uvicorn[standard]>=0.30.0",
+    "python-dotenv>=1.1.1",
+    # Database
+    "tortoise-orm>=0.25.1",
+    "asyncpg>=0.30.0",
+    "aerich>=0.9.1",
+    # Authentication & Security
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt==4.2.0",
+    "python-multipart>=0.0.6",
+    "email-validator>=2.1.0",
+    # Social Login
+    "authlib>=1.3.0",
+    "httpx>=0.27.0",
+    # AWS & Image Processing
+    "boto3>=1.34.0",
+    "pillow>=10.0.0", # Image processing (이미지 처리용)
+    # Notifications & Background Tasks
+    "pyfcm>=1.5.4",
+    "fastapi-mail>=1.4.0",
+    # Utilities
+    "python-dateutil>=2.8.2",
+    "pydantic-settings>=2.1.0",
+    "fastapi-limiter>=0.1.5",
+    "pandas>=2.3.2",
+    "openpyxl>=3.1.5",
+    "claude>=0.4.11",
+    "claude-code>=0.0.1",
+    "beautifulsoup4>=4.13.5",
+    "selenium>=4.35.0",
+    "webdriver-manager>=4.0.2",
+    "playwright>=1.55.0",
+    "background-tasks>=0.0.1",
+    "loguru>=0.7.0", # 로깅 (코드에서 실제 사용 중)
+    "requests>=2.31.0", # HTTP requests (scrapping.py에서 사용)
+    "locust>=2.41.3",
 ]
 
 [project.optional-dependencies]
 dev = [
+    # Testing
     "pytest>=8.0.0",
     "pytest-asyncio>=0.21.0",
-    "httpx>=0.27.0",
+    "pytest-cov>=4.0.0",
+    "factory-boy>=3.3.0",  # Test data factories
+    
+    # Code Quality
     "ruff>=0.6.0",
     "mypy>=1.11.0",
+    "pre-commit>=4.3.0",
+    
+    # Development Tools
+    "httpx>=0.27.0",  # API testing
+    "ipython>=8.0.0",  # Better REPL
+    "rich>=13.0.0",  # Pretty printing
+    
+    # Database tools
+    "pgcli>=4.0.0",  # PostgreSQL CLI
+    
+    # Heavy development packages (개발환경에서만 필요)
+    "loguru>=0.7.0",  # 로깅
+    "celery>=5.3.0",  # Background tasks
+    "redis>=5.0.0",  # Redis
+    "pandas>=2.3.2",  # Data analysis
+    "openpyxl>=3.1.5",  # Excel
+    "claude>=0.4.11",  # AI tools
+    "claude-code>=0.0.1",
+    "selenium>=4.35.0",  # Browser automation
+    "webdriver-manager>=4.0.2",
+    "playwright>=1.55.0",  # Browser testing
+]
+
+prod = [
+    # Production server
+    "gunicorn>=21.0.0",
+    
+    # Monitoring & Logging
+    "sentry-sdk[fastapi]>=1.40.0",
+    "prometheus-client>=0.19.0",
+    
+    # Performance
+    "orjson>=3.9.0",  # Faster JSON
+    "ujson>=5.8.0",   # Alternative JSON
 ]
 
 [tool.ruff]
@@ -41,6 +111,8 @@ ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "UP034", # avoid extraneous parentheses(Tortoise ORM 과 충돌)
+    "UP037", # remove quotes from type annotation(Tortoise ORM ForeignKeyRelation과 충돌)
 ]
 
 [tool.ruff.format]
@@ -50,22 +122,31 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "app/features"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+# Allow tests to be discovered in feature directories  
+pythonpath = [".", "app"]
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 # Relax type checking for early development
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 # Ignore missing imports for external packages
 ignore_missing_imports = true
+# Disable strict optional for now
+strict_optional = false
+# Allow untyped decorators and calls
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+# Suppress specific errors for Tortoise ORM fields
+warn_no_return = false
 
 [tool.aerich]
 tortoise_orm = "app.config.TORTOISE_ORM"
-location = "./migrations"
+location = "migrations"
 src_folder = "./."

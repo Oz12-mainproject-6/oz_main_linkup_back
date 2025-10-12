@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from tortoise import fields
+
+from app.core.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.features.artists.models import Artist
+    from app.features.users.models import User
+
+
+class Post(TimestampMixin):
+    """포스트 모델 (팬 포스트)"""
+
+    id = fields.BigIntField(pk=True, description="포스트 ID")
+    user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="posts", description="작성자"
+    )
+    artist: fields.ForeignKeyRelation[Artist] = fields.ForeignKeyField(
+        "models.Artist",
+        related_name="posts",
+        description="관련 아티스트",
+    )
+
+    content = fields.TextField(description="게시글 내용")
+    image_url = fields.TextField(null=True, description="포스트 이미지 URL")
+    # S3에 이미지 업로드 후 URL 저장하는 필드 추가
+
+    class Meta:
+        table = "post"
+
+
+class Comment(TimestampMixin):
+    """포스트 댓글"""
+
+    id = fields.BigIntField(pk=True, description="댓글 ID")
+    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
+        "models.Post",
+        related_name="comments",
+        description="포스트",
+    )
+    user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User",
+        related_name="comments",
+        description="작성자",
+    )
+
+    content = fields.CharField(max_length=500, description="댓글 내용")
+
+    class Meta:
+        table = "comment"
+
+
+class Like(TimestampMixin):
+    """포스트 좋아요"""
+
+    id = fields.BigIntField(pk=True, description="좋아요 ID")
+    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
+        "models.Post",
+        related_name="likes",
+        description="포스트",
+    )
+    user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User",
+        related_name="likes",
+        description="사용자",
+    )
+
+    class Meta:
+        table = "like"
+        unique_together = [("post", "user")]

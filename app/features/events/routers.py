@@ -1,0 +1,294 @@
+from datetime import datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi.responses import StreamingResponse
+from loguru import logger
+
+from app.core.exceptions import FileProcessingError, NotFoundError, ValidationError
+from app.external.scrapping import fetch_myloveidol_json, get_myloveidol_schedule
+from app.features.events.schemas import (
+    BulkEventCreate,
+    CalendarEventsQueryParams,
+    DownloadEventsQueryParams,
+    EventListResponse,
+    EventOut,
+    EventResponse,
+    EventsQueryParams,
+    FileUploadResponse,
+    ScrapeEventsQueryParams,
+    SubscribedEventsQueryParams,
+)
+from app.features.events.services import EventCRUD, EventService, notification_service
+from app.features.notifications.models import Subscription
+from app.features.users.dependencies import get_current_user
+from app.features.users.models import User
+
+event_router = APIRouter(prefix="/api/events", tags=["events"])
+
+
+@event_router.get("", response_model=EventListResponse)
+async def get_events(params: EventsQueryParams = Depends()):
+    """이벤트 목록 조회"""
+    try:
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
+        end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
+
+    except ValueError as err:
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
+
+    events, total = await EventCRUD.get_list(
+        page=params.page,
+        limit=params.limit,
+        artist_parent_group=params.artist_parent_group,
+        artist_id=params.artist_id,
+        category=params.category,
+        visibility=params.visibility,
+        is_active=True,  # 활성 이벤트만 조회 (기본값)
+        start_date=start_dt,
+        end_date=end_dt,
+        subscribed_artist_ids=None,  # 구독 필터링 제거
+    )
+
+    return EventListResponse(
+        events=events,
+        total=total,
+        page=params.page,
+        size=params.limit,
+    )
+
+
+@event_router.get("/subscribed", response_model=EventListResponse)
+async def get_subscribed_events(
+    params: SubscribedEventsQueryParams = Depends(),
+    current_user: User = Depends(get_current_user),
+):
+    """구독 중인 아티스트의 이벤트 목록 조회 (로그인 필요)"""
+    try:
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
+        end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
+
+    except ValueError as err:
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
+
+    # 구독 중인 아티스트 ID 조회
+    subscribed_artist_ids = await Subscription.filter(
+        user=current_user, is_active=True
+    ).values_list("artist_id", flat=True)
+
+    if not subscribed_artist_ids:
+        return EventListResponse(
+            events=[], total=0, page=params.page, size=params.limit
+        )
+
+    events, total = await EventCRUD.get_list(
+        page=params.page,
+        limit=params.limit,
+        artist_parent_group=params.artist_parent_group,
+        artist_id=params.artist_id,
+        category=params.category,
+        visibility=params.visibility,
+        is_active=True,  # 활성 이벤트만 조회 (기본값)
+        start_date=start_dt,
+        end_date=end_dt,
+        subscribed_artist_ids=subscribed_artist_ids,  # 구독 필터링 적용
+    )
+
+    return EventListResponse(
+        events=events,
+        total=total,
+        page=params.page,
+        size=params.limit,
+    )
+
+
+@event_router.get("/{event_id}", response_model=EventResponse)
+async def get_event(event_id: int):
+    """이벤트 상세 조회"""
+    event = await EventCRUD.get_by_id(event_id)
+    if not event:
+        raise NotFoundError("Event not found")
+    return event
+
+
+@event_router.post("", response_model=FileUploadResponse)
+async def bulk_create_events(
+    bulk_data: BulkEventCreate, background_tasks: BackgroundTasks
+):
+    """일괄 이벤트 생성"""
+    events_data = [event.dict() for event in bulk_data.events]
+    created_count, errors = await EventCRUD.bulk_create(events_data)
+
+    # 성공 이벤트 알림
+    if created_count > 0:
+        recent_events, _ = await EventCRUD.get_list(limit=created_count)
+        background_tasks.add_task(
+            notification_service.send_batch_notification, recent_events, "bulk_create"
+        )
+
+    return FileUploadResponse(
+        message=f"Processed {len(events_data)} events",
+        total_processed=len(events_data),
+        successful=created_count,
+        failed=len(events_data) - created_count,
+        errors=errors,
+    )
+
+
+# ---------------------------
+# 특정 이벤트 다운로드
+# ---------------------------
+@event_router.get("/file/download/{event_id}")
+async def download_single_event(event_id: int):
+    """
+    단일 이벤트 다운로드
+    """
+    event = await EventCRUD.get_by_id(event_id)
+    if not event:
+        raise NotFoundError("Event not found")
+
+    file_stream = await EventService.export_single_event(event)
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=events_template.xlsx"},
+    )
+
+
+# ---------------------------
+# 조건 기반 일괄 이벤트 다운로드
+# ---------------------------
+@event_router.get("/file/download-all")
+async def download_bulk_events(params: DownloadEventsQueryParams = Depends()):
+    """
+    조건 기반 일괄 이벤트 다운로드
+    """
+    try:
+        start_dt = (
+            datetime.fromisoformat(params.start_date) if params.start_date else None
+        )
+        end_dt = datetime.fromisoformat(params.end_date) if params.end_date else None
+    except ValueError as err:
+        raise ValidationError("Invalid date format. Use YYYY-MM-DD") from err
+
+    file_stream = await EventService.export_to_excel(
+        artist_id=params.artist_id,
+        category=params.category,
+        start_date=start_dt,
+        end_date=end_dt,
+    )
+
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=events_export.xlsx"},
+    )
+
+
+@event_router.get("/calendar/{year}/{month}")
+async def get_calendar_events(year: int, month: int):
+    start_date = datetime(year, month, 1)
+    end_date = datetime(year + (month // 12), month % 12 + 1, 1)
+    events = await EventCRUD.get_events_by_date_range(start_date, end_date)
+    return {"year": year, "month": month, "events": events}
+
+
+@event_router.post("/notifications")
+async def trigger_notifications(background_tasks: BackgroundTasks):
+    """수동 알림 트리거"""
+    try:
+        background_tasks.add_task(EventService.trigger_notifications)
+        return {"message": "Notification trigger initiated"}
+    except Exception as e:
+        logger.error(f"Failed to trigger notifications: {str(e)}")
+
+        raise FileProcessingError(f"File processing error: {str(e)}") from e
+
+
+# author : Juwon
+# date : 2025-09-25
+# content : 최애돌 사이트를 크롤링 하는 사이트로 변경한 라우터
+
+
+@event_router.get("/scrape/myloveidol")
+async def scrape_myloveidol_events(params: ScrapeEventsQueryParams = Depends()):
+    """
+    최애돌 JSON API 크롤링 → DB 저장
+    """
+    try:
+        events = fetch_myloveidol_json(locale=params.locale)
+
+        # artist_name 필터 적용
+        if params.artist_name:
+            events = [e for e in events if e["idol"]["name"] == params.artist_name]
+
+        # DB 저장 등 로직 추가 가능
+        return {
+            "source": "myloveidol.com",
+            "locale": params.locale,
+            "events": events,
+            "count": len(events),
+        }
+    except Exception as e:
+        import traceback
+
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "source": "myloveidol.com",
+        }
+
+
+@event_router.post("/scrape/myloveidol/import")
+async def import_myloveidol_events(
+    params: ScrapeEventsQueryParams = Depends(),
+    background_tasks: BackgroundTasks = None,
+):
+    """MyLoveIdol에서 스케줄을 크롤링해서 DB에 저장"""
+    try:
+        events = fetch_myloveidol_json(locale=params.locale)
+
+        # artist_name 필터 적용
+        if params.artist_name:
+            events = [e for e in events if e["idol"]["name"] == params.artist_name]
+
+        # 크롤링
+        scraped_events = get_myloveidol_schedule(
+            locale=params.locale, artist_name=params.artist_name
+        )
+
+        if not scraped_events:
+            return {
+                "message": "크롤링된 이벤트가 없습니다.",
+                "imported": 0,
+                "errors": [],
+            }
+
+        # DB 저장 형식으로 변환
+        result = await EventService.import_scraped_events(scraped_events, "myloveidol")
+
+        # 성공한 이벤트에 대해 알림
+        if result.successful > 0 and background_tasks:
+            recent_events, _ = await EventCRUD.get_list(limit=result.successful)
+            background_tasks.add_task(
+                notification_service.send_batch_notification,
+                recent_events,
+                "scraped_import",
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"MyLoveIdol import error: {str(e)}")
+        raise ValidationError(f"Import error: {str(e)}") from e
+
+
+@event_router.get("/events/calendar/", response_model=list[EventOut])
+async def calender_get_events(params: CalendarEventsQueryParams = Depends()):
+    events, total = await EventCRUD.get_list()
+    if params.artist_name:
+        events = [e for e in events if e.artist_name == params.artist_name]
+    return events
