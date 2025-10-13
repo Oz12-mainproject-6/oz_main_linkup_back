@@ -64,25 +64,12 @@ class SubscriptionService:
         if artist.artist_type != ArtistType.GROUP:
             return []
 
-        # parent_group 관계를 사용하여 멤버들 조회 (더 정확함)
+        # parent_group 관계를 사용하여 멤버들 조회
         group_members = await Artist.filter(
             parent_group=artist,
             artist_type=ArtistType.INDIVIDUAL,
             is_active=True,
         )
-
-        # parent_group이 설정되지 않은 경우에만 group_name으로 fallback
-        # 단, 반드시 GROUP 타입일 때만 실행
-        if (
-            not group_members
-            and artist.group_name
-            and artist.artist_type == ArtistType.GROUP
-        ):
-            group_members = await Artist.filter(
-                group_name=artist.group_name,
-                artist_type=ArtistType.INDIVIDUAL,
-                is_active=True,
-            )
 
         return group_members
 
@@ -207,7 +194,7 @@ class SubscriptionService:
         user: User, artist: Artist
     ) -> list[Subscription]:
         """취소할 상속 구독들 조회"""
-        # parent_group 관계를 사용하여 멤버들의 상속 구독 취소 (더 정확함)
+        # parent_group 관계를 사용하여 멤버들의 상속 구독 취소
         inherited_subscriptions = await Subscription.filter(
             user=user,
             subscription_type=SubscriptionType.INHERITED,
@@ -215,16 +202,6 @@ class SubscriptionService:
             artist__parent_group=artist,
             artist__artist_type=ArtistType.INDIVIDUAL,
         )
-
-        # parent_group이 설정되지 않은 경우 group_name으로 fallback
-        if not inherited_subscriptions and artist.group_name:
-            inherited_subscriptions = await Subscription.filter(
-                user=user,
-                subscription_type=SubscriptionType.INHERITED,
-                is_active=True,
-                artist__group_name=artist.group_name,
-                artist__artist_type=ArtistType.INDIVIDUAL,
-            )
 
         return inherited_subscriptions
 
